@@ -1,0 +1,44 @@
+substitutions:
+  _REGION: us-central1
+  _SERVICE: huntr-backend
+  _IMAGE: us-central1-docker.pkg.dev/notional-cirrus-458606-e0/huntr/backend
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_IMAGE}:$SHORT_SHA
+      - -t
+      - ${_IMAGE}:latest
+      - .
+    dir: backend
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_IMAGE}:$SHORT_SHA
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_IMAGE}:latest
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_IMAGE}:$SHORT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --memory=2Gi
+      - --cpu=2
+      - --max-instances=5
+      - --set-secrets=GOOGLE_CLOUD_PROJECT=GOOGLE_CLOUD_PROJECT:latest,GOOGLE_CLOUD_LOCATION=GOOGLE_CLOUD_LOCATION:latest,GOOGLE_APPLICATION_CREDENTIALS=GOOGLE_APPLICATION_CREDENTIALS:latest,SERPER_API_KEY=SERPER_API_KEY:latest,TAVILY_API_KEY=TAVILY_API_KEY:latest,BREVO_SMTP_KEY=BREVO_SMTP_KEY:latest,PROXYCURL_API_KEY=PROXYCURL_API_KEY:latest,BREVO_SENDER_NAME=BREVO_SENDER_NAME:latest,BREVO_SENDER_EMAIL=BREVO_SENDER_EMAIL:latest,NEXT_PUBLIC_API_URL=NEXT_PUBLIC_API_URL:latest
+
+images:
+  - ${_IMAGE}:$SHORT_SHA
+  - ${_IMAGE}:latest
