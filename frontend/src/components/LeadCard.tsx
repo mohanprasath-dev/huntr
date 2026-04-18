@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import FollowupTimeline from "@/components/FollowupTimeline";
 import { sendLead } from "@/lib/huntr-api";
@@ -15,16 +15,121 @@ interface LeadCardProps {
 }
 
 function getScoreTone(score: number): string {
-  if (score >= 75) {
+  if (score >= 90) {
     return "border-emerald-400/40 bg-emerald-500/10 text-emerald-200";
   }
-  if (score >= 60) {
+  if (score >= 70) {
     return "border-accent/50 bg-accent/15 text-blue-100";
   }
-  if (score >= 40) {
+  if (score >= 60) {
     return "border-amber-400/40 bg-amber-500/10 text-amber-100";
   }
   return "border-rose-400/40 bg-rose-500/10 text-rose-100";
+}
+
+function deriveCompanySize(lead: Lead): string {
+  const directSize =
+    lead.company_size ??
+    lead.companySize ??
+    lead.size ??
+    lead.org_size ??
+    lead.company_profile?.size;
+
+  if (typeof directSize === "string" && directSize.trim()) {
+    return directSize.trim();
+  }
+
+  const score = Number(lead.score) || 0;
+  if (score >= 90) {
+    return "500+ employees";
+  }
+  if (score >= 70) {
+    return "100-500 employees";
+  }
+  if (score >= 60) {
+    return "20-100 employees";
+  }
+  return "<20 employees";
+}
+
+function parseDecisionMaker(lead: Lead): { name: string; title: string } {
+  const providedTitle = lead.decision_maker_title ?? lead.decisionMakerTitle;
+  const raw = String(lead.decision_maker || "").trim();
+
+  if (providedTitle && providedTitle.trim()) {
+    return {
+      name: raw || "Unknown Decision Maker",
+      title: providedTitle.trim(),
+    };
+  }
+
+  for (const delimiter of [" - ", " | ", " — "]) {
+    if (raw.includes(delimiter)) {
+      const [name, title] = raw.split(delimiter);
+      if (name?.trim()) {
+        return {
+          name: name.trim(),
+          title: title?.trim() || "Title unavailable",
+        };
+      }
+    }
+  }
+
+  const cleaned = raw.replace(/\(.*?\)/g, "").trim();
+  return {
+    name: cleaned || raw || "Unknown Decision Maker",
+    title: "Title unavailable",
+  };
+}
+
+function derivePainPoint(lead: Lead): string {
+  const explicitPain = lead.pain_point ?? lead.painPoint;
+  if (typeof explicitPain === "string" && explicitPain.trim()) {
+    return explicitPain.trim();
+  }
+
+  const emailBody = String(lead.email_draft?.body || "");
+  const emailSubject = String(lead.email_draft?.subject || "");
+
+  const dragMatch = emailBody.match(/looks\s+like\s+(.+?)\s+is\s+creating\s+drag/i);
+  if (dragMatch?.[1]) {
+    return dragMatch[1].replace(/\s+/g, " ").trim();
+  }
+
+  const fixMatch = emailSubject.match(/fixing\s+(.+)/i);
+  if (fixMatch?.[1]) {
+    return fixMatch[1].replace(/[.:]+$/, "").trim();
+  }
+
+  const normalized = emailBody.replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return "No specific pain point detected from this lead yet.";
+  }
+
+  const sentence = normalized.split(".")[0]?.trim() || normalized;
+  return sentence.length > 120 ? `${sentence.slice(0, 117)}...` : sentence;
+}
+
+function deriveLeadSource(lead: Lead): "LinkedIn" | "Reddit" | "Twitter" {
+  const explicitSource = String(lead.source || "").toLowerCase();
+  if (explicitSource.includes("reddit")) {
+    return "Reddit";
+  }
+  if (explicitSource.includes("twitter") || explicitSource.includes("x.com")) {
+    return "Twitter";
+  }
+  if (explicitSource.includes("linkedin")) {
+    return "LinkedIn";
+  }
+
+  const signal = `${lead.company} ${lead.decision_maker} ${lead.linkedin_draft}`.toLowerCase();
+  if (signal.includes("reddit")) {
+    return "Reddit";
+  }
+  if (signal.includes("twitter") || signal.includes("x.com")) {
+    return "Twitter";
+  }
+  return "LinkedIn";
 }
 
 export default function LeadCard({
@@ -35,14 +140,37 @@ export default function LeadCard({
   onSent,
 }: LeadCardProps) {
   const [recipient, setRecipient] = useState("");
+  const [emailExpanded, setEmailExpanded] = useState(false);
+  const [linkedinExpanded, setLinkedinExpanded] = useState(false);
+  const [showFollowups, setShowFollowups] = useState(false);
+  const [emailSubject, setEmailSubject] = useState(lead.email_draft?.subject || "");
+  const [emailBody, setEmailBody] = useState(lead.email_draft?.body || "");
+  const [linkedinMessage, setLinkedinMessage] = useState(lead.linkedin_draft || "");
   const [sendState, setSendState] = useState<"idle" | "sending" | "sent" | "error">(
     alreadySent ? "sent" : "idle",
   );
   const [sendMessage, setSendMessage] = useState("");
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const [copyMessage, setCopyMessage] = useState("");
+
+  useEffect(() => {
+    setEmailSubject(lead.email_draft?.subject || "");
+    setEmailBody(lead.email_draft?.body || "");
+    setLinkedinMessage(lead.linkedin_draft || "");
+  }, [lead]);
+
+  useEffect(() => {
+    if (alreadySent) {
+      setSendState("sent");
+    }
+  }, [alreadySent]);
 
   const scoreTone = useMemo(() => getScoreTone(Number(lead.score) || 0), [lead.score]);
-  const emailReady =
-    Boolean(lead.email_draft?.subject?.trim()) && Boolean(lead.email_draft?.body?.trim());
+  const companySize = useMemo(() => deriveCompanySize(lead), [lead]);
+  const decisionMaker = useMemo(() => parseDecisionMaker(lead), [lead]);
+  const painPoint = useMemo(() => derivePainPoint(lead), [lead]);
+  const source = useMemo(() => deriveLeadSource(lead), [lead]);
+  const emailReady = Boolean(emailSubject.trim()) && Boolean(emailBody.trim());
 
   async function handleSend(): Promise<void> {
     setSendState("sending");
@@ -73,37 +201,125 @@ export default function LeadCard({
     }
   }
 
+  async function handleCopyLinkedin(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(linkedinMessage.trim());
+      setCopyState("copied");
+      setCopyMessage("LinkedIn message copied.");
+    } catch {
+      setCopyState("error");
+      setCopyMessage("Clipboard copy failed. Copy manually from the editor.");
+    }
+  }
+
   return (
     <article className="rounded-2xl border border-white/10 bg-panel p-5 shadow-[0_18px_40px_rgba(0,0,0,0.35)]">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-white">{lead.company}</h3>
-          <p className="mt-1 text-sm text-muted">Decision Maker: {lead.decision_maker}</p>
+          <p className="mt-1 text-sm text-muted">Size: {companySize}</p>
         </div>
         <div className={`rounded-full border px-3 py-1 text-sm font-semibold ${scoreTone}`}>
           Score {lead.score}
         </div>
       </header>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-2">
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
         <section className="rounded-xl border border-white/10 bg-white/2 p-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">Email Draft</p>
-          <p className="mt-3 text-sm font-semibold text-accent">{lead.email_draft.subject || "No subject generated"}</p>
-          <p className="mt-3 max-h-52 overflow-auto whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-            {lead.email_draft.body || "No body generated."}
-          </p>
+          <p className="text-xs uppercase tracking-[0.2em] text-muted">Decision Maker</p>
+          <p className="mt-2 text-sm font-semibold text-white">{decisionMaker.name}</p>
+          <p className="mt-1 text-sm text-muted">{decisionMaker.title}</p>
         </section>
 
         <section className="rounded-xl border border-white/10 bg-white/2 p-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">LinkedIn Draft</p>
-          <p className="mt-3 max-h-52 overflow-auto whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-            {lead.linkedin_draft || "No LinkedIn draft generated."}
-          </p>
+          <p className="text-xs uppercase tracking-[0.2em] text-muted">Pain Point Detected</p>
+          <p className="mt-2 truncate text-sm text-foreground/90">{painPoint}</p>
+          <p className="mt-2 text-xs text-muted">Source: {source}</p>
         </section>
       </div>
 
-      <div className="mt-4">
-        <FollowupTimeline sequence={lead.followup_sequence ?? []} />
+      <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        <section className="rounded-xl border border-white/10 bg-white/2 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted">Email Draft</p>
+            <button
+              type="button"
+              onClick={() => setEmailExpanded((current) => !current)}
+              className="text-xs font-medium text-accent hover:text-blue-200"
+            >
+              {emailExpanded ? "Collapse" : "Expand"}
+            </button>
+          </div>
+
+          {emailExpanded ? (
+            <div className="mt-3 space-y-3">
+              <label className="block">
+                <span className="text-xs uppercase tracking-[0.15em] text-muted">Subject</span>
+                <input
+                  type="text"
+                  value={emailSubject}
+                  onChange={(event) => setEmailSubject(event.target.value)}
+                  className="mt-2 w-full rounded-lg border border-white/15 bg-panel-elevated px-3 py-2 text-sm text-white outline-none transition-colors focus:border-accent"
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs uppercase tracking-[0.15em] text-muted">Body</span>
+                <textarea
+                  value={emailBody}
+                  onChange={(event) => setEmailBody(event.target.value)}
+                  rows={9}
+                  className="mt-2 w-full resize-y rounded-lg border border-white/15 bg-panel-elevated px-3 py-2 text-sm leading-relaxed text-white outline-none transition-colors focus:border-accent"
+                />
+              </label>
+            </div>
+          ) : (
+            <p className="mt-3 line-clamp-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+              {emailBody || "No email draft generated."}
+            </p>
+          )}
+        </section>
+
+        <section className="rounded-xl border border-white/10 bg-white/2 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted">LinkedIn Message</p>
+            <button
+              type="button"
+              onClick={() => setLinkedinExpanded((current) => !current)}
+              className="text-xs font-medium text-accent hover:text-blue-200"
+            >
+              {linkedinExpanded ? "Collapse" : "Expand"}
+            </button>
+          </div>
+
+          {linkedinExpanded ? (
+            <textarea
+              value={linkedinMessage}
+              onChange={(event) => setLinkedinMessage(event.target.value)}
+              rows={9}
+              className="mt-3 w-full resize-y rounded-lg border border-white/15 bg-panel-elevated px-3 py-2 text-sm leading-relaxed text-white outline-none transition-colors focus:border-accent"
+            />
+          ) : (
+            <p className="mt-3 line-clamp-4 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+              {linkedinMessage || "No LinkedIn draft generated."}
+            </p>
+          )}
+        </section>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-white/10 bg-white/2 p-4">
+        <button
+          type="button"
+          onClick={() => setShowFollowups((current) => !current)}
+          className="text-xs font-semibold uppercase tracking-[0.16em] text-accent hover:text-blue-200"
+        >
+          {showFollowups ? "Hide Follow-up Timeline" : "Show Follow-up Timeline"}
+        </button>
+
+        {showFollowups ? (
+          <div className="mt-3">
+            <FollowupTimeline sequence={lead.followup_sequence ?? []} />
+          </div>
+        ) : null}
       </div>
 
       <footer className="mt-4 rounded-xl border border-white/10 bg-white/2 p-4">
@@ -125,13 +341,31 @@ export default function LeadCard({
             disabled={sendState === "sending" || sendState === "sent" || !emailReady}
             className="h-11 rounded-lg border border-accent/60 bg-accent px-4 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.08)_inset] transition hover:bg-[#2f7dff] disabled:cursor-not-allowed disabled:opacity-55"
           >
-            {sendState === "sending" ? "Sending..." : sendState === "sent" ? "Sent" : "Approve & Send"}
+            {sendState === "sending"
+              ? "Sending..."
+              : sendState === "sent"
+                ? "Sent"
+                : "Approve & Send Email"}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCopyLinkedin}
+            className="h-11 rounded-lg border border-white/20 bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15"
+          >
+            Copy LinkedIn Message
           </button>
         </div>
 
         {sendMessage ? (
           <p className={`mt-3 text-sm ${sendState === "error" ? "text-rose-300" : "text-emerald-300"}`}>
             {sendMessage}
+          </p>
+        ) : null}
+
+        {copyMessage ? (
+          <p className={`mt-2 text-sm ${copyState === "error" ? "text-rose-300" : "text-blue-200"}`}>
+            {copyMessage}
           </p>
         ) : null}
 

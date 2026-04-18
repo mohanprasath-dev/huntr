@@ -42,6 +42,18 @@ export interface Lead {
   company: string;
   score: number;
   decision_maker: string;
+  company_size?: string;
+  companySize?: string;
+  size?: string;
+  org_size?: string;
+  company_profile?: {
+    size?: string;
+  };
+  decision_maker_title?: string;
+  decisionMakerTitle?: string;
+  pain_point?: string;
+  painPoint?: string;
+  source?: string;
   email_draft: {
     subject: string;
     body: string;
