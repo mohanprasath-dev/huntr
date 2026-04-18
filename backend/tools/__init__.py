@@ -1,0 +1,1 @@
+"""HuntR tool adapters."""
