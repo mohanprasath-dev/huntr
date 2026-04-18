@@ -31,6 +31,8 @@ class SendEmailRequest(BaseModel):
     recipient: str = Field(..., min_length=3)
     subject: str = Field(..., min_length=3)
     body: str = Field(..., min_length=10)
+    from_name: str = Field(default="HuntR")
+    from_email: str = Field(default="")
     dry_run: bool = True
 
 
@@ -59,11 +61,22 @@ def run_hunt(request: HuntRequest) -> HuntResponse:
 
 @app.post("/api/v1/outreach/send", response_model=SendEmailResponse)
 def send_outreach_email(request: SendEmailRequest) -> SendEmailResponse:
+    if request.dry_run:
+        return SendEmailResponse(
+            status="dry_run",
+            provider="brevo-smtp",
+            recipient=request.recipient,
+            detail="Dry run only. Confirm with dry_run=false to actually send.",
+        )
+
+    sender_email = request.from_email or os.getenv("BREVO_SENDER_EMAIL", "hello@huntr.ai")
+    sender_name = request.from_name or os.getenv("BREVO_SENDER_NAME", "HuntR")
     result = email_tool.send_email(
-        to_email=request.recipient,
+        to=request.recipient,
         subject=request.subject,
         body=request.body,
-        dry_run=request.dry_run,
+        from_name=sender_name,
+        from_email=sender_email,
     )
     return SendEmailResponse(
         status=result.get("status", "failed"),

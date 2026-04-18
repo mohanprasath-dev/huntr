@@ -48,10 +48,42 @@ class OutreachAgent:
         generated_text = self._generate_with_gemini(prompt)
         parsed = self._parse_generated_payload(generated_text)
         payload = self._build_payload(context=context, generated=parsed)
+        payload.update(self._build_confirmation_payload(context=context, lead=lead))
 
         enriched = dict(lead)
         enriched.update(payload)
         return enriched
+
+    def send_email_if_confirmed(
+        self,
+        lead: dict[str, Any],
+        email_tool: Any,
+        to_email: str,
+        from_name: str,
+        from_email: str,
+        confirmed: bool = False,
+    ) -> dict[str, Any]:
+        if not confirmed:
+            return {
+                "status": "awaiting_confirmation",
+                "detail": "User confirmation required before sending outreach email.",
+            }
+
+        subject = str(lead.get("email_subject") or "").strip()
+        body = str(lead.get("email_body") or "").strip()
+        if not subject or not body:
+            return {
+                "status": "failed",
+                "detail": "Missing generated email subject or body.",
+            }
+
+        return email_tool.send_email(
+            to=to_email,
+            subject=subject,
+            body=body,
+            from_name=from_name,
+            from_email=from_email,
+        )
 
     def _build_client(self):
         if genai is None or not self.project:
@@ -467,3 +499,26 @@ class OutreachAgent:
             return compact
         trimmed = compact[: self._MAX_LINKEDIN_CHARS - 3].rstrip()
         return f"{trimmed}..."
+
+    def _build_confirmation_payload(
+        self,
+        context: dict[str, str],
+        lead: dict[str, Any],
+    ) -> dict[str, Any]:
+        recipient_hint = self._recipient_hint(lead)
+        recipient_text = recipient_hint if recipient_hint else "the intended recipient"
+
+        return {
+            "email_send_requires_confirmation": True,
+            "email_send_status": "awaiting_user_confirmation",
+            "email_send_prompt": (
+                f"Confirm before sending this email to {recipient_text} for {context['company_name']}."
+            ),
+            "email_send_recipient_hint": recipient_hint,
+        }
+
+    def _recipient_hint(self, lead: dict[str, Any]) -> str:
+        email_hint = str(lead.get("email_hint") or lead.get("contact_hint") or "").strip()
+        if "@" in email_hint:
+            return email_hint
+        return ""
