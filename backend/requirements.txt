@@ -4,3 +4,4 @@ python-dotenv
 requests
 google-genai
 google-adk
+google-cloud-aiplatform

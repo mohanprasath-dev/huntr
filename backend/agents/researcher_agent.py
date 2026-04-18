@@ -14,8 +14,13 @@ class ResearcherAgent:
 
     TAVILY_URL = "https://api.tavily.com/search"
 
-    def __init__(self, linkedin_tool: LinkedInTool | None = None) -> None:
+    def __init__(
+        self,
+        linkedin_tool: LinkedInTool | None = None,
+        gemini_llm: Any | None = None,
+    ) -> None:
         self.linkedin_tool = linkedin_tool or LinkedInTool()
+        self.gemini_llm = gemini_llm
         self.tavily_api_key = os.getenv("TAVILY_API_KEY", "")
 
     def enrich(self, lead: dict[str, Any]) -> dict[str, Any]:

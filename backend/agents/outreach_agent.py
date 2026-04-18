@@ -14,8 +14,13 @@ except Exception:  # pragma: no cover - optional dependency at scaffold time
 class OutreachAgent:
     """Builds personalized outreach copy using Gemini on Vertex AI."""
 
-    def __init__(self, model: str = "gemini-2.5-flash") -> None:
+    def __init__(
+        self,
+        model: str = "gemini-2.5-flash",
+        gemini_llm: Any | None = None,
+    ) -> None:
         self.model = model
+        self.gemini_llm = gemini_llm
         self.project = os.getenv("GOOGLE_CLOUD_PROJECT", "")
         self.location = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
         self.client = self._build_client()

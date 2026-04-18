@@ -6,6 +6,9 @@ from typing import Any
 class FollowupAgent:
     """Creates a multi-step follow-up plan for each qualified lead."""
 
+    def __init__(self, gemini_llm: Any | None = None) -> None:
+        self.gemini_llm = gemini_llm
+
     def build_sequence(self, lead: dict[str, Any], steps: int = 3) -> dict[str, Any]:
         company = lead.get("company_name", "the team")
         sequence = []

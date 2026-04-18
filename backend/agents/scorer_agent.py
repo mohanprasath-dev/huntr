@@ -8,8 +8,13 @@ from tools.scorer_tool import LeadScorer, LeadSignals
 class ScorerAgent:
     """Scores each lead for outreach priority."""
 
-    def __init__(self, scorer: LeadScorer | None = None) -> None:
+    def __init__(
+        self,
+        scorer: LeadScorer | None = None,
+        gemini_llm: Any | None = None,
+    ) -> None:
         self.scorer = scorer or LeadScorer()
+        self.gemini_llm = gemini_llm
 
     def score(self, lead: dict[str, Any]) -> dict[str, Any]:
         research = lead.get("research", {})
