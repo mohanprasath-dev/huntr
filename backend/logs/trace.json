@@ -1,0 +1,634 @@
+[
+  {
+    "timestamp": "2026-04-18T16:41:15.822370+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "manager:start",
+    "payload": {
+      "niche": "AI services",
+      "pain_keyword": "AI services",
+      "max_leads": 10
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:41:40.610340+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "scout:attempt",
+    "payload": {
+      "attempt": 1,
+      "query": "AI services AI services outbound bottleneck",
+      "found": 10,
+      "total_unique": 10
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:41:54.696553+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 1,
+      "company": "How AI is killing outbound sales and what to do instead",
+      "domain": "highspot.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:42:11.173486+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 2,
+      "company": "The biggest bottleneck in outbound isn't motivation. It's manual ...",
+      "domain": "battery.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:42:24.288605+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 3,
+      "company": "B2B Support Leaders Face AI Challenges and Opportunities",
+      "domain": "getmosaic.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:42:33.906876+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 4,
+      "company": "Solving the Bandwidth Problem With AI and Outsourced Cold Calling",
+      "domain": "leadsatscale.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:42:42.849323+00:00",
+    "run_id": "86d35916-9666-4a17-97c2-dc82cff8ba79",
+    "step": "manager:start",
+    "payload": {
+      "niche": "AI services",
+      "pain_keyword": "AI services",
+      "max_leads": 5
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:42:43.367745+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 5,
+      "company": "AI Outbound Sales For Scaling Startup Revenue Teams",
+      "domain": "b2boutboundsystems.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:42:56.410258+00:00",
+    "run_id": "86d35916-9666-4a17-97c2-dc82cff8ba79",
+    "step": "scout:attempt",
+    "payload": {
+      "attempt": 1,
+      "query": "AI services AI services outbound bottleneck",
+      "found": 5,
+      "total_unique": 5
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:01.247415+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 6,
+      "company": "Michele Torti",
+      "domain": "linkedin.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:01.748548+00:00",
+    "run_id": "86d35916-9666-4a17-97c2-dc82cff8ba79",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 1,
+      "company": "How AI is killing outbound sales and what to do instead",
+      "domain": "highspot.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:07.338909+00:00",
+    "run_id": "86d35916-9666-4a17-97c2-dc82cff8ba79",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 2,
+      "company": "The biggest bottleneck in outbound isn't motivation. It's manual ...",
+      "domain": "battery.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:11.327282+00:00",
+    "run_id": "86d35916-9666-4a17-97c2-dc82cff8ba79",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 3,
+      "company": "AI Outbound Sales For Scaling Startup Revenue Teams",
+      "domain": "b2boutboundsystems.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:15.647589+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 7,
+      "company": "Scaling LinkedIn acquisition: how AI",
+      "domain": "techfundingnews.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:23.773544+00:00",
+    "run_id": "86d35916-9666-4a17-97c2-dc82cff8ba79",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 4,
+      "company": "AI in B2B Marketing: Tools, Use Cases, Trends, & Limitations",
+      "domain": "factors.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:25.554432+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 8,
+      "company": "How To Scale Outbound Sales With Automation Tools",
+      "domain": "monday.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:27.941279+00:00",
+    "run_id": "86d35916-9666-4a17-97c2-dc82cff8ba79",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 5,
+      "company": "Solving the Bandwidth Problem With AI and Outsourced Cold Calling",
+      "domain": "leadsatscale.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:27.942299+00:00",
+    "run_id": "86d35916-9666-4a17-97c2-dc82cff8ba79",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 1,
+      "company": "How AI is killing outbound sales and what to do instead",
+      "score": 48
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:27.959686+00:00",
+    "run_id": "86d35916-9666-4a17-97c2-dc82cff8ba79",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 2,
+      "company": "The biggest bottleneck in outbound isn't motivation. It's manual ...",
+      "score": 56
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:27.975191+00:00",
+    "run_id": "86d35916-9666-4a17-97c2-dc82cff8ba79",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 3,
+      "company": "AI Outbound Sales For Scaling Startup Revenue Teams",
+      "score": 78
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:27.991957+00:00",
+    "run_id": "86d35916-9666-4a17-97c2-dc82cff8ba79",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 4,
+      "company": "AI in B2B Marketing: Tools, Use Cases, Trends, & Limitations",
+      "score": 43
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:28.008798+00:00",
+    "run_id": "86d35916-9666-4a17-97c2-dc82cff8ba79",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 5,
+      "company": "Solving the Bandwidth Problem With AI and Outsourced Cold Calling",
+      "score": 48
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:28.025276+00:00",
+    "run_id": "86d35916-9666-4a17-97c2-dc82cff8ba79",
+    "step": "scorer:pass",
+    "payload": {
+      "threshold": 60,
+      "qualified": 1,
+      "scored": 5
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:30.889561+00:00",
+    "run_id": "86d35916-9666-4a17-97c2-dc82cff8ba79",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 1,
+      "company": "AI Outbound Sales For Scaling Startup Revenue Teams"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:30.891264+00:00",
+    "run_id": "86d35916-9666-4a17-97c2-dc82cff8ba79",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 1,
+      "company": "AI Outbound Sales For Scaling Startup Revenue Teams",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:30.907377+00:00",
+    "run_id": "86d35916-9666-4a17-97c2-dc82cff8ba79",
+    "step": "manager:complete",
+    "payload": {
+      "returned_leads": 1
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:38.851989+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 9,
+      "company": "Reporting metrics to clients for ai services",
+      "domain": "feedbackrobot.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:43.014596+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 10,
+      "company": "AI in B2B Marketing: Tools, Use Cases, Trends, & Limitations",
+      "domain": "factors.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:43.016915+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 1,
+      "company": "How AI is killing outbound sales and what to do instead",
+      "score": 48
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:43.034259+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 2,
+      "company": "The biggest bottleneck in outbound isn't motivation. It's manual ...",
+      "score": 56
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:43.048935+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 3,
+      "company": "B2B Support Leaders Face AI Challenges and Opportunities",
+      "score": 43
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:43.065399+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 4,
+      "company": "Solving the Bandwidth Problem With AI and Outsourced Cold Calling",
+      "score": 48
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:43.079954+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 5,
+      "company": "AI Outbound Sales For Scaling Startup Revenue Teams",
+      "score": 78
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:43.094060+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 6,
+      "company": "Michele Torti",
+      "score": 77
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:43.110179+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 7,
+      "company": "Scaling LinkedIn acquisition: how AI",
+      "score": 64
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:43.124108+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 8,
+      "company": "How To Scale Outbound Sales With Automation Tools",
+      "score": 40
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:43.137657+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 9,
+      "company": "Reporting metrics to clients for ai services",
+      "score": 51
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:43.152032+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 10,
+      "company": "AI in B2B Marketing: Tools, Use Cases, Trends, & Limitations",
+      "score": 43
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:43.166114+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "scorer:pass",
+    "payload": {
+      "threshold": 60,
+      "qualified": 3,
+      "scored": 10
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:44.956242+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 1,
+      "company": "AI Outbound Sales For Scaling Startup Revenue Teams"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:44.958006+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 1,
+      "company": "AI Outbound Sales For Scaling Startup Revenue Teams",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:45.344718+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 2,
+      "company": "Michele Torti"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:45.346418+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 2,
+      "company": "Michele Torti",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:46.616619+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 3,
+      "company": "Scaling LinkedIn acquisition: how AI"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:46.617882+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 3,
+      "company": "Scaling LinkedIn acquisition: how AI",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:43:46.626481+00:00",
+    "run_id": "b96c0f96-760d-4802-9539-f27cd5cd0528",
+    "step": "manager:complete",
+    "payload": {
+      "returned_leads": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:44:24.767864+00:00",
+    "run_id": "93903e4a-5778-4cfe-90d0-d6cc3e12132b",
+    "step": "manager:start",
+    "payload": {
+      "niche": "AI services",
+      "pain_keyword": "AI services",
+      "max_leads": 5
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:44:38.524363+00:00",
+    "run_id": "93903e4a-5778-4cfe-90d0-d6cc3e12132b",
+    "step": "scout:attempt",
+    "payload": {
+      "attempt": 1,
+      "query": "AI services AI services outbound bottleneck",
+      "found": 5,
+      "total_unique": 5
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:44:44.382516+00:00",
+    "run_id": "93903e4a-5778-4cfe-90d0-d6cc3e12132b",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 1,
+      "company": "How AI is killing outbound sales and what to do instead",
+      "domain": "highspot.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:44:49.736189+00:00",
+    "run_id": "93903e4a-5778-4cfe-90d0-d6cc3e12132b",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 2,
+      "company": "The biggest bottleneck in outbound isn't motivation. It's manual ...",
+      "domain": "battery.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:44:53.825223+00:00",
+    "run_id": "93903e4a-5778-4cfe-90d0-d6cc3e12132b",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 3,
+      "company": "AI Outbound Sales For Scaling Startup Revenue Teams",
+      "domain": "b2boutboundsystems.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:44:59.821507+00:00",
+    "run_id": "93903e4a-5778-4cfe-90d0-d6cc3e12132b",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 4,
+      "company": "B2B Support Leaders Face AI Challenges and Opportunities",
+      "domain": "getmosaic.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:45:04.556472+00:00",
+    "run_id": "93903e4a-5778-4cfe-90d0-d6cc3e12132b",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 5,
+      "company": "Solving the Bandwidth Problem With AI and Outsourced Cold Calling",
+      "domain": "leadsatscale.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:45:04.558178+00:00",
+    "run_id": "93903e4a-5778-4cfe-90d0-d6cc3e12132b",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 1,
+      "company": "How AI is killing outbound sales and what to do instead",
+      "score": 48
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:45:04.574871+00:00",
+    "run_id": "93903e4a-5778-4cfe-90d0-d6cc3e12132b",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 2,
+      "company": "The biggest bottleneck in outbound isn't motivation. It's manual ...",
+      "score": 56
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:45:04.592304+00:00",
+    "run_id": "93903e4a-5778-4cfe-90d0-d6cc3e12132b",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 3,
+      "company": "AI Outbound Sales For Scaling Startup Revenue Teams",
+      "score": 78
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:45:04.609418+00:00",
+    "run_id": "93903e4a-5778-4cfe-90d0-d6cc3e12132b",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 4,
+      "company": "B2B Support Leaders Face AI Challenges and Opportunities",
+      "score": 43
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:45:04.625642+00:00",
+    "run_id": "93903e4a-5778-4cfe-90d0-d6cc3e12132b",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 5,
+      "company": "Solving the Bandwidth Problem With AI and Outsourced Cold Calling",
+      "score": 48
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:45:04.640330+00:00",
+    "run_id": "93903e4a-5778-4cfe-90d0-d6cc3e12132b",
+    "step": "scorer:pass",
+    "payload": {
+      "threshold": 60,
+      "qualified": 1,
+      "scored": 5
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:45:06.379974+00:00",
+    "run_id": "93903e4a-5778-4cfe-90d0-d6cc3e12132b",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 1,
+      "company": "AI Outbound Sales For Scaling Startup Revenue Teams"
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:45:06.381083+00:00",
+    "run_id": "93903e4a-5778-4cfe-90d0-d6cc3e12132b",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 1,
+      "company": "AI Outbound Sales For Scaling Startup Revenue Teams",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-18T16:45:06.391123+00:00",
+    "run_id": "93903e4a-5778-4cfe-90d0-d6cc3e12132b",
+    "step": "manager:complete",
+    "payload": {
+      "returned_leads": 1
+    }
+  }
+]
