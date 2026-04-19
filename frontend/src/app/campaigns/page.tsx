@@ -1,7 +1,10 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { getCampaignHistory } from "@/lib/huntr-api";
-import type { CampaignSummary } from "@/lib/huntr-types";
+import type { CampaignComparison, CampaignSummary } from "@/lib/huntr-types";
 
 function statusBadgeClass(status: string): string {
   if (status === "completed") {
@@ -69,16 +72,221 @@ function getLeadCounts(campaign: CampaignSummary): { found: number; qualified: n
   };
 }
 
-export default async function CampaignsPage() {
-  let campaigns: CampaignSummary[] = [];
-  let errorMessage = "";
+function getEmailsSent(campaign: CampaignSummary): number {
+  const withEmailMetrics = campaign as CampaignSummary & {
+    emails_sent?: unknown;
+    sent_count?: unknown;
+    emails_personalized?: unknown;
+  };
 
-  try {
-    const result = await getCampaignHistory(20);
-    campaigns = Array.isArray(result) ? result.slice(0, 20) : [];
-  } catch (error) {
-    errorMessage = error instanceof Error ? error.message : "Unable to load campaign history.";
+  const possibleValues = [
+    withEmailMetrics.emails_sent,
+    withEmailMetrics.sent_count,
+    withEmailMetrics.emails_personalized,
+  ];
+
+  for (const value of possibleValues) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return Math.max(0, Math.floor(value));
+    }
   }
+
+  return 0;
+}
+
+function getQualifiedRate(campaign: CampaignSummary): number {
+  const leads = getLeadCounts(campaign);
+  if (leads.found <= 0) {
+    return 0;
+  }
+  return (leads.qualified / leads.found) * 100;
+}
+
+function buildComparison(campaign1: CampaignSummary, campaign2: CampaignSummary): CampaignComparison {
+  const campaign1Rate = getQualifiedRate(campaign1);
+  const campaign2Rate = getQualifiedRate(campaign2);
+
+  if (campaign1Rate > campaign2Rate) {
+    return { campaign1, campaign2, winner: "campaign1" };
+  }
+  if (campaign2Rate > campaign1Rate) {
+    return { campaign1, campaign2, winner: "campaign2" };
+  }
+  return { campaign1, campaign2, winner: "equal" };
+}
+
+function ComparisonPanel({
+  title,
+  campaign,
+  isWinner,
+}: {
+  title: string;
+  campaign: CampaignSummary;
+  isWinner: boolean;
+}) {
+  const leads = getLeadCounts(campaign);
+  const qualifiedRate = getQualifiedRate(campaign);
+  const avgScore = getAvgScore(campaign);
+  const emailsSent = getEmailsSent(campaign);
+  const status = String(campaign.status || "unknown").toLowerCase();
+
+  return (
+    <section
+      className={`rounded-xl border bg-[#0b1525] p-4 ${
+        isWinner ? "border-emerald-400/60 shadow-[0_0_0_1px_rgba(16,185,129,0.3)_inset]" : "border-white/10"
+      }`}
+    >
+      <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-100">{title}</h3>
+      <div className="mt-3 space-y-2 text-sm text-white/90">
+        <p>
+          <span className="text-xs uppercase tracking-widest text-muted">Niche</span>
+          <br />
+          <span className="font-semibold text-white">{campaign.niche || "Unknown niche"}</span>
+        </p>
+        <p>
+          <span className="text-xs uppercase tracking-widest text-muted">Pain keyword</span>
+          <br />
+          <span className="text-white/85">{campaign.pain_keyword || "N/A"}</span>
+        </p>
+        <p>
+          <span className="text-xs uppercase tracking-widest text-muted">Leads found / qualified</span>
+          <br />
+          <span className="font-semibold text-white">
+            {leads.found} / {leads.qualified}
+          </span>
+        </p>
+        <p>
+          <span className="text-xs uppercase tracking-widest text-muted">Qualified rate</span>
+          <br />
+          <span className="font-semibold text-white">{qualifiedRate.toFixed(1)}%</span>
+        </p>
+        <p>
+          <span className="text-xs uppercase tracking-widest text-muted">Avg score</span>
+          <br />
+          <span className="font-semibold text-white">{formatAvgScore(avgScore)}</span>
+        </p>
+        <p>
+          <span className="text-xs uppercase tracking-widest text-muted">Emails sent</span>
+          <br />
+          <span className="font-semibold text-white">{emailsSent}</span>
+        </p>
+        <p>
+          <span className="text-xs uppercase tracking-widest text-muted">Status</span>
+          <br />
+          <span className="font-semibold text-white uppercase">{status}</span>
+        </p>
+      </div>
+    </section>
+  );
+}
+
+export default function CampaignsPage() {
+  const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCampaigns = async (): Promise<void> => {
+      try {
+        const result = await getCampaignHistory(20);
+        if (!isMounted) {
+          return;
+        }
+        setCampaigns(Array.isArray(result) ? result.slice(0, 20) : []);
+        setErrorMessage("");
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+        const detail = error instanceof Error ? error.message : "Unable to load campaign history.";
+        setErrorMessage(detail);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadCampaigns();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    setSelectedJobIds((current) => {
+      const next = current.filter((jobId) => campaigns.some((campaign) => campaign.job_id === jobId));
+      if (next.length === current.length && next.every((jobId, index) => jobId === current[index])) {
+        return current;
+      }
+      return next.slice(0, 2);
+    });
+  }, [campaigns]);
+
+  const selectedCampaigns = useMemo(() => {
+    return selectedJobIds
+      .map((jobId) => campaigns.find((campaign) => campaign.job_id === jobId))
+      .filter((campaign): campaign is CampaignSummary => Boolean(campaign));
+  }, [campaigns, selectedJobIds]);
+
+  const hasAnySelected = selectedCampaigns.length > 0;
+  const canCompare = selectedCampaigns.length === 2;
+
+  const comparison = useMemo(() => {
+    if (!canCompare) {
+      return null;
+    }
+    return buildComparison(selectedCampaigns[0], selectedCampaigns[1]);
+  }, [canCompare, selectedCampaigns]);
+
+  const winnerBanner = useMemo(() => {
+    if (!comparison) {
+      return "";
+    }
+
+    const campaign1Rate = getQualifiedRate(comparison.campaign1);
+    const campaign2Rate = getQualifiedRate(comparison.campaign2);
+    const delta = Math.abs(campaign1Rate - campaign2Rate);
+
+    if (comparison.winner === "equal") {
+      return "Equal performance";
+    }
+
+    if (comparison.winner === "campaign1") {
+      return `Campaign 1 performed ${delta.toFixed(1)}% better`;
+    }
+
+    return `Campaign 2 performed ${delta.toFixed(1)}% better`;
+  }, [comparison]);
+
+  useEffect(() => {
+    if (selectedCampaigns.length < 2) {
+      setIsCompareOpen(false);
+    }
+  }, [selectedCampaigns.length]);
+
+  function toggleCampaignSelection(jobId: string): void {
+    setSelectedJobIds((current) => {
+      if (current.includes(jobId)) {
+        return current.filter((id) => id !== jobId);
+      }
+
+      if (current.length >= 2) {
+        return current;
+      }
+
+      return [...current, jobId];
+    });
+  }
+
+  const checkboxVisibilityClass = hasAnySelected
+    ? "opacity-100"
+    : "opacity-100 md:opacity-0 md:group-hover:opacity-100";
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-screen-2xl px-4 pb-12 pt-8 md:px-8 md:pt-10">
@@ -102,7 +310,11 @@ export default async function CampaignsPage() {
         </p>
       ) : null}
 
-      {campaigns.length === 0 ? (
+      {isLoading ? (
+        <div className="mt-8 rounded-2xl border border-white/10 bg-panel px-6 py-10 text-center">
+          <p className="text-base text-muted">Loading campaigns...</p>
+        </div>
+      ) : campaigns.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-white/10 bg-panel px-6 py-10 text-center">
           <p className="text-base text-muted">No campaigns yet. Start your first hunt.</p>
         </div>
@@ -112,6 +324,7 @@ export default async function CampaignsPage() {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b border-white/10 text-left text-xs uppercase tracking-[0.14em] text-muted">
+                  <th className="w-12 px-4 py-3 font-semibold">&nbsp;</th>
                   <th className="px-4 py-3 font-semibold">Niche</th>
                   <th className="px-4 py-3 font-semibold">Pain keyword</th>
                   <th className="px-4 py-3 font-semibold">Leads found / qualified</th>
@@ -126,9 +339,23 @@ export default async function CampaignsPage() {
                   const status = String(campaign.status || "unknown").toLowerCase();
                   const leads = getLeadCounts(campaign);
                   const avgScore = getAvgScore(campaign);
+                  const isChecked = selectedJobIds.includes(campaign.job_id);
 
                   return (
-                    <tr key={campaign.job_id} className="border-b border-white/5 text-sm text-white/90 last:border-b-0">
+                    <tr
+                      key={campaign.job_id}
+                      className="group border-b border-white/5 text-sm text-white/90 last:border-b-0"
+                    >
+                      <td className="px-4 py-3">
+                        <label className={`inline-flex cursor-pointer items-center transition-opacity ${checkboxVisibilityClass}`}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleCampaignSelection(campaign.job_id)}
+                            className="h-4 w-4 cursor-pointer rounded border border-[#1e8dff] accent-[#1e8dff]"
+                          />
+                        </label>
+                      </td>
                       <td className="px-4 py-3 font-medium text-white">{campaign.niche || "Unknown niche"}</td>
                       <td className="px-4 py-3 text-white/80">{campaign.pain_keyword || "N/A"}</td>
                       <td className="px-4 py-3 font-medium text-white">
@@ -163,19 +390,30 @@ export default async function CampaignsPage() {
               const status = String(campaign.status || "unknown").toLowerCase();
               const leads = getLeadCounts(campaign);
               const avgScore = getAvgScore(campaign);
+              const isChecked = selectedJobIds.includes(campaign.job_id);
 
               return (
-                <article key={campaign.job_id} className="rounded-xl border border-white/10 bg-panel px-4 py-4">
+                <article key={campaign.job_id} className="group rounded-xl border border-white/10 bg-panel px-4 py-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h2 className="text-base font-semibold text-white">{campaign.niche || "Unknown niche"}</h2>
                       <p className="mt-1 text-sm text-muted">{campaign.pain_keyword || "N/A"}</p>
                     </div>
-                    <span
-                      className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${statusBadgeClass(status)}`}
-                    >
-                      {status}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <label className={`inline-flex cursor-pointer items-center transition-opacity ${checkboxVisibilityClass}`}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleCampaignSelection(campaign.job_id)}
+                          className="h-4 w-4 cursor-pointer rounded border border-[#1e8dff] accent-[#1e8dff]"
+                        />
+                      </label>
+                      <span
+                        className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${statusBadgeClass(status)}`}
+                      >
+                        {status}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
@@ -198,6 +436,57 @@ export default async function CampaignsPage() {
           </div>
         </section>
       )}
+
+      {canCompare ? (
+        <button
+          type="button"
+          onClick={() => setIsCompareOpen(true)}
+          className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 rounded-full bg-[#1e8dff] px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(30,141,255,0.45)] transition hover:bg-[#3b9dff]"
+        >
+          Compare 2 Campaigns →
+        </button>
+      ) : null}
+
+      {isCompareOpen && comparison ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#000000cc] p-4">
+          <div className="w-full max-w-5xl rounded-2xl border border-white/15 bg-[#070f1d] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.7)] md:p-6">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold text-white md:text-2xl">Campaign Comparison</h2>
+              <button
+                type="button"
+                onClick={() => setIsCompareOpen(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/25 text-sm font-semibold text-white/85 transition hover:border-white/50 hover:text-white"
+                aria-label="Close comparison"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <ComparisonPanel
+                title="Campaign 1"
+                campaign={comparison.campaign1}
+                isWinner={comparison.winner === "campaign1"}
+              />
+              <ComparisonPanel
+                title="Campaign 2"
+                campaign={comparison.campaign2}
+                isWinner={comparison.winner === "campaign2"}
+              />
+            </div>
+
+            <div
+              className={`mt-4 rounded-xl border px-4 py-3 text-sm font-semibold ${
+                comparison.winner === "equal"
+                  ? "border-white/20 bg-white/5 text-white"
+                  : "border-emerald-400/50 bg-emerald-500/12 text-emerald-100"
+              }`}
+            >
+              {winnerBanner}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

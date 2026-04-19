@@ -109,6 +109,12 @@ export interface CampaignSummary {
   avg_score?: number;
 }
 
+export interface CampaignComparison {
+  campaign1: CampaignSummary;
+  campaign2: CampaignSummary;
+  winner: "campaign1" | "campaign2" | "equal";
+}
+
 export interface CampaignDetail {
   job_id: string;
   config?: Record<string, unknown>;
