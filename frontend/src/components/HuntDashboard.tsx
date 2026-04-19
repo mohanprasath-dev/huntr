@@ -406,7 +406,7 @@ export default function HuntDashboard({
       ) : null}
 
       <div className="mt-6">
-        <AgentPipeline jobId={jobId} />
+        <AgentPipeline jobId={jobId} jobStatus={normalizedStatus} />
       </div>
 
       {error ? (

@@ -7,6 +7,7 @@ import type { StreamEvent } from "@/lib/huntr-types";
 
 interface AgentPipelineProps {
   jobId: string;
+  jobStatus?: string | null;
 }
 
 type StreamState = "connecting" | "live" | "closed" | "error";
@@ -164,9 +165,16 @@ function formatTraceLine(event: StreamEvent): string {
   return `[${timeLabel}] ${event.agent.toUpperCase()}.${event.action} ${event.result_summary}`;
 }
 
-export default function AgentPipeline({ jobId }: AgentPipelineProps) {
+function isTerminalJobStatus(status: string | null | undefined): boolean {
+  const normalized = String(status ?? "").toLowerCase();
+  return normalized === "completed" || normalized === "stopped";
+}
+
+export default function AgentPipeline({ jobId, jobStatus }: AgentPipelineProps) {
   const [events, setEvents] = useState<StreamEvent[]>([]);
   const [streamState, setStreamState] = useState<StreamState>("connecting");
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const [sseError, setSseError] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
   const [stopError, setStopError] = useState("");
   const [isExternallyStopped, setIsExternallyStopped] = useState(false);
@@ -176,14 +184,19 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
   const logContainerRef = useRef<HTMLDivElement | null>(null);
   const completedDispatchRef = useRef(false);
   const scoutAttemptCounterRef = useRef(0);
+  const isParentTerminalStatus = isTerminalJobStatus(jobStatus);
+  const parentTerminalStatusRef = useRef(isParentTerminalStatus);
 
   useEffect(() => {
-    const source = new EventSource(getStreamUrl(jobId));
-    let closedByTerminalEvent = false;
+    parentTerminalStatusRef.current = isParentTerminalStatus;
+  }, [isParentTerminalStatus]);
 
+  useEffect(() => {
     scoutAttemptCounterRef.current = 0;
     setEvents([]);
     setStreamState("connecting");
+    setReconnectAttempts(0);
+    setSseError(false);
     setIsStopping(false);
     setStopError("");
     setIsExternallyStopped(false);
@@ -191,58 +204,116 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
     setSelfCorrectionBannerState("hidden");
     completedDispatchRef.current = false;
 
-    source.onopen = () => {
-      setStreamState("live");
-    };
+  }, [jobId]);
 
-    source.onmessage = (message) => {
-      try {
-        const parsed = JSON.parse(message.data) as StreamEvent;
-        const agent = String(parsed.agent ?? "").toLowerCase();
-        const action = String(parsed.action ?? "").toLowerCase();
+  useEffect(() => {
+    if (isParentTerminalStatus) {
+      setStreamState("closed");
+      setReconnectAttempts(0);
+      setSseError(false);
+      return;
+    }
 
-        if (agent === "scout" && action === "attempt") {
-          scoutAttemptCounterRef.current += 1;
-          if (scoutAttemptCounterRef.current > 1) {
+    let source: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let reconnectCount = 0;
+    let closedByTerminalEvent = false;
+    let cancelled = false;
+
+    const connectSSE = (): void => {
+      if (cancelled) {
+        return;
+      }
+
+      if (parentTerminalStatusRef.current) {
+        setStreamState("closed");
+        setSseError(false);
+        return;
+      }
+
+      const eventSource = new EventSource(getStreamUrl(jobId));
+      source = eventSource;
+      setStreamState("connecting");
+
+      eventSource.onopen = () => {
+        reconnectCount = 0;
+        setReconnectAttempts(0);
+        setSseError(false);
+        setStreamState("live");
+      };
+
+      eventSource.onmessage = (message) => {
+        try {
+          const parsed = JSON.parse(message.data) as StreamEvent;
+          const agent = String(parsed.agent ?? "").toLowerCase();
+          const action = String(parsed.action ?? "").toLowerCase();
+
+          if (agent === "scout" && action === "attempt") {
+            scoutAttemptCounterRef.current += 1;
+            if (scoutAttemptCounterRef.current > 1) {
+              setSelfCorrectionBannerState((current) =>
+                current === "resolved" ? current : "triggered",
+              );
+            }
+          }
+
+          if (action === "self_correction_triggered" || isRetrySignal(parsed)) {
             setSelfCorrectionBannerState((current) =>
               current === "resolved" ? current : "triggered",
             );
           }
+
+          if (action === "self_correction_resolved") {
+            setSelfCorrectionBannerState("resolved");
+          }
+
+          setEvents((current) => [...current, parsed].slice(-220));
+
+          if (parsed.action === "stream_closed") {
+            closedByTerminalEvent = true;
+            setStreamState("closed");
+            setSseError(false);
+            eventSource.close();
+          }
+        } catch {
+          // Ignore malformed stream messages and continue listening.
         }
+      };
 
-        if (action === "self_correction_triggered" || isRetrySignal(parsed)) {
-          setSelfCorrectionBannerState((current) =>
-            current === "resolved" ? current : "triggered",
-          );
-        }
+      eventSource.onerror = () => {
+        eventSource.close();
 
-        if (action === "self_correction_resolved") {
-          setSelfCorrectionBannerState("resolved");
-        }
-
-        setEvents((current) => [...current, parsed].slice(-220));
-
-        if (parsed.action === "stream_closed") {
-          closedByTerminalEvent = true;
+        if (closedByTerminalEvent || parentTerminalStatusRef.current) {
           setStreamState("closed");
-          source.close();
+          setSseError(false);
+          return;
         }
-      } catch {
+
+        reconnectCount += 1;
+        setReconnectAttempts(reconnectCount);
+
+        if (reconnectCount < 3) {
+          reconnectTimer = setTimeout(() => {
+            connectSSE();
+          }, 2000);
+          return;
+        }
+
+        setSseError(true);
         setStreamState("error");
-      }
+      };
     };
 
-    source.onerror = () => {
-      if (!closedByTerminalEvent) {
-        setStreamState("error");
-      }
-      source.close();
-    };
+    connectSSE();
 
     return () => {
-      source.close();
+      cancelled = true;
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
+      source?.close();
     };
-  }, [jobId]);
+  }, [isParentTerminalStatus, jobId]);
 
   useEffect(() => {
     const onHuntStopped = (event: Event): void => {
@@ -502,15 +573,120 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
 
   const terminalEvents = useMemo(() => events.slice(-180), [events]);
 
+  const stageCards = useMemo(() => {
+    return PIPELINE_STAGES.map((stage, index) => {
+      const stageData = stageSnapshots[stage.id];
+      const hasEvents = stageData.eventCount > 0;
+      const isActive =
+        !isTerminalRun &&
+        (latestAgentIndex === index ||
+          (latestAgentIndex === -1 && index === 0 && streamState !== "error"));
+      const isComplete =
+        hasEvents &&
+        (hasStoppedState ||
+          (isTerminalRun
+            ? latestAgentIndex >= index || stageData.processed > 0
+            : latestAgentIndex > index));
+
+      const isCancelled = hasStoppedState && !isComplete;
+
+      const phase: StagePhase = isComplete
+        ? "complete"
+        : isActive
+          ? "active"
+          : isCancelled
+            ? "cancelled"
+            : "inactive";
+
+      return {
+        stage,
+        stageData,
+        phase,
+      };
+    });
+  }, [hasStoppedState, isTerminalRun, latestAgentIndex, stageSnapshots, streamState]);
+
+  const renderStageCard = (
+    stageCard: (typeof stageCards)[number],
+    isMobile: boolean,
+  ) => {
+    const { phase, stage, stageData } = stageCard;
+
+    return (
+      <article
+        className={`relative h-auto min-h-[120px] overflow-visible break-words rounded-xl border p-3 transition-all duration-300 ${
+          isMobile ? "min-w-40 shrink-0" : "min-w-0"
+        } ${stageTone(phase)}`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p
+              className={`break-words text-[13px] font-semibold leading-snug ${
+                phase === "complete"
+                  ? "text-[#166534]"
+                  : phase === "active"
+                    ? "text-[#0066ff]"
+                    : "text-[#9ca3af]"
+              }`}
+            >
+              <span className="mr-2">{stage.emoji}</span>
+              {stage.title}
+            </p>
+            <span
+              className={`mt-1 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                stage.modelTier === "pro"
+                  ? "bg-[#eff6ff] text-[#1d4ed8]"
+                  : "bg-[#f3f4f6] text-[#6b7280]"
+              }`}
+            >
+              {stage.modelBadge}
+            </span>
+          </div>
+          {stageData.retried ? (
+            <span className="rounded-full border border-[#f59e0b] bg-[#fff7ed] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b45309]">
+              Retried
+            </span>
+          ) : null}
+        </div>
+
+        <p className="mt-2 break-words text-[11px] leading-relaxed text-[#6b7280]">{stage.detail}</p>
+
+        <div className="mt-4 flex items-center justify-between border-t border-[#e5e7eb] pt-3">
+          {phase === "complete" ? (
+            <span className="text-[11px] font-semibold text-[#166534]">Complete</span>
+          ) : phase === "active" ? (
+            <span className="text-[11px] font-semibold text-[#0066ff]">Running</span>
+          ) : phase === "cancelled" ? (
+            <span className="text-[11px] font-semibold text-[#9ca3af]">Cancelled</span>
+          ) : (
+            <span className="text-[11px] text-[#9ca3af]">Waiting</span>
+          )}
+
+          <span
+            className={`font-mono text-[11px] ${
+              phase === "complete"
+                ? "text-[#166534]"
+                : phase === "active"
+                  ? "text-[#0066ff]"
+                  : "text-[#9ca3af]"
+            }`}
+          >
+            {stageData.processed} leads
+          </span>
+        </div>
+      </article>
+    );
+  };
+
   return (
     <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
       <header className="flex flex-col gap-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-[#111827]">Live Agent Pipeline</h2>
-          <p className="mt-1 break-all text-sm text-[#6b7280]">
-            Real-time orchestration stream for job {jobId}
-          </p>
+            <h2 className="text-lg font-semibold text-[#111827]">Live Agent Pipeline</h2>
+            <p className="mt-1 break-all text-sm text-[#6b7280]">
+              Real-time orchestration stream for job {jobId}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
             <div className="hidden rounded-xl border border-[#e5e7eb] bg-white px-4 py-2 text-right shadow-[0_1px_3px_rgba(0,0,0,0.08)] sm:block">
@@ -539,6 +715,18 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
         ) : null}
       </header>
 
+      {reconnectAttempts > 0 && !sseError ? (
+        <p className="mt-3 rounded-lg border border-[#bfdbfe] bg-[#eff6ff] px-3 py-2 text-xs text-[#1d4ed8]">
+          Reconnecting SSE stream (attempt {reconnectAttempts} of 3)...
+        </p>
+      ) : null}
+
+      {sseError ? (
+        <p className="mt-3 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-sm text-[#dc2626]">
+          SSE Error
+        </p>
+      ) : null}
+
       {stopError ? (
         <p className="mt-3 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-sm text-[#dc2626]">
           {stopError}
@@ -566,102 +754,22 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
       ) : null}
 
       <div className="mt-5 pb-1">
+        <div className="hidden gap-2 sm:grid sm:grid-cols-5 sm:items-stretch">
+          {stageCards.map((stageCard) => (
+            <Fragment key={stageCard.stage.id}>{renderStageCard(stageCard, false)}</Fragment>
+          ))}
+        </div>
+
         <div
-          className="agent-pipeline-scroll flex items-stretch gap-2 overflow-x-auto pb-2 snap-x snap-mandatory [scrollbar-color:#e5e7eb_transparent] [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]"
+          className="agent-pipeline-scroll flex items-stretch gap-2 overflow-x-auto pb-2 [scrollbar-color:#d1d5db_transparent] [scrollbar-width:thin] [-webkit-overflow-scrolling:touch] sm:hidden"
         >
-          {PIPELINE_STAGES.map((stage, index) => {
-            const stageData = stageSnapshots[stage.id];
-            const hasEvents = stageData.eventCount > 0;
-            const isActive =
-              !isTerminalRun &&
-              (latestAgentIndex === index ||
-                (latestAgentIndex === -1 && index === 0 && streamState !== "error"));
-            const isComplete =
-              hasEvents &&
-              (hasStoppedState ||
-                (isTerminalRun ? latestAgentIndex >= index || stageData.processed > 0 : latestAgentIndex > index));
-
-            const isCancelled = hasStoppedState && !isComplete;
-
-            const phase: StagePhase = isComplete
-              ? "complete"
-              : isActive
-                ? "active"
-                : isCancelled
-                  ? "cancelled"
-                  : "inactive";
-
+          {stageCards.map((stageCard, index) => {
             return (
-              <Fragment key={stage.id}>
-                <article
-                  className={`relative min-w-40 shrink-0 snap-start rounded-xl border p-3.5 transition-all duration-300 sm:p-4 ${stageTone(phase)}`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p
-                        className={`text-sm font-semibold sm:text-[15px] ${
-                          phase === "complete"
-                            ? "text-[#166534]"
-                            : phase === "active"
-                              ? "text-[#0066ff]"
-                              : "text-[#9ca3af]"
-                        }`}
-                      >
-                        <span className="mr-2">{stage.emoji}</span>
-                        {stage.title}
-                      </p>
-                      <span
-                        className={`mt-1 inline-flex rounded-full px-1.5 py-0.5 text-xs font-medium ${
-                          stage.modelTier === "pro"
-                            ? "bg-[#eff6ff] text-[#1d4ed8]"
-                            : "bg-[#f3f4f6] text-[#6b7280]"
-                        }`}
-                      >
-                        {stage.modelBadge}
-                      </span>
-                    </div>
-                    {stageData.retried ? (
-                      <span className="rounded-full border border-[#f59e0b] bg-[#fff7ed] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b45309]">
-                        Retried
-                      </span>
-                    ) : null}
-                  </div>
+              <Fragment key={stageCard.stage.id}>
+                {renderStageCard(stageCard, true)}
 
-                  <p
-                    className={`mt-2 text-[11px] leading-relaxed ${
-                      phase === "complete" ? "text-[#166534]" : "text-[#9ca3af]"
-                    }`}
-                  >
-                    {stage.detail}
-                  </p>
-
-                  <div className="mt-4 flex items-center justify-between border-t border-[#e5e7eb] pt-3 text-xs">
-                    {phase === "complete" ? (
-                      <span className="font-semibold text-[#166534]">✓ Complete</span>
-                    ) : phase === "active" ? (
-                      <span className="font-semibold text-[#0066ff]">Running...</span>
-                    ) : phase === "cancelled" ? (
-                      <span className="font-semibold text-[#9ca3af]">Cancelled</span>
-                    ) : (
-                      <span className="text-[#9ca3af]">Waiting</span>
-                    )}
-
-                    <span
-                      className={`font-mono text-[11px] ${
-                        phase === "complete"
-                          ? "text-[#166534]"
-                          : phase === "active"
-                            ? "text-[#0066ff]"
-                            : "text-[#9ca3af]"
-                      }`}
-                    >
-                      {stageData.processed} leads
-                    </span>
-                  </div>
-                </article>
-
-                {index < PIPELINE_STAGES.length - 1 ? (
-                  <div className="flex min-w-5 shrink-0 items-center justify-center px-1 py-0 text-xl text-[#0066ff]">
+                {index < stageCards.length - 1 ? (
+                  <div className="flex min-w-4 shrink-0 items-center justify-center px-1 py-0 text-sm text-[#6b7280]">
                     <span>→</span>
                   </div>
                 ) : null}
