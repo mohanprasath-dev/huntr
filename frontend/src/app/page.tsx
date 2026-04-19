@@ -1,5 +1,6 @@
 import CampaignForm from "@/components/CampaignForm";
 import CampaignHistory from "@/components/CampaignHistory";
+import LiveStats from "@/components/LiveStats";
 
 export default function Home() {
   return (
@@ -17,19 +18,8 @@ export default function Home() {
             and draft outbound for your highest-intent prospects in real time.
           </p>
 
-          <div className="mt-7 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-white/10 bg-white/2 p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-muted">Agents</p>
-              <p className="mt-2 text-2xl font-semibold text-white">5</p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/2 p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-muted">Live Trace</p>
-              <p className="mt-2 text-2xl font-semibold text-white">SSE</p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/2 p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-muted">Actions</p>
-              <p className="mt-2 text-2xl font-semibold text-white">Approve + Send</p>
-            </div>
+          <div className="mt-7">
+            <LiveStats />
           </div>
         </div>
 

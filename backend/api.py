@@ -22,6 +22,7 @@ from job_state import JOBS, JOBS_LOCK
 
 from agents.manager import HuntRManager
 from db.campaign_store import get_campaign, list_campaigns, save_campaign
+from db.firestore_client import CAMPAIGNS_COLLECTION, db
 from tools.email_tool import BrevoEmailTool
 
 load_dotenv()
@@ -567,6 +568,12 @@ class SendLeadResponse(BaseModel):
     detail: str | None = None
 
 
+class GlobalStatsResponse(BaseModel):
+    total_leads_all_time: int
+    total_emails_sent: int
+    active_jobs: int
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {
@@ -575,6 +582,41 @@ def health() -> dict[str, str]:
         "project": os.getenv("GOOGLE_CLOUD_PROJECT", ""),
         "location": os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1"),
     }
+
+
+@app.get("/stats/global", response_model=GlobalStatsResponse)
+def get_global_stats() -> GlobalStatsResponse:
+    total_leads_all_time = 0
+
+    try:
+        if db is not None:
+            snapshots = db.collection(CAMPAIGNS_COLLECTION).stream()
+            for snapshot in snapshots:
+                campaign = snapshot.to_dict() or {}
+                leads_found_raw = campaign.get("leads_found")
+                if leads_found_raw is None:
+                    impact = campaign.get("impact") if isinstance(campaign.get("impact"), dict) else {}
+                    leads_found_raw = impact.get("leads_found")
+
+                leads_found = _to_int(leads_found_raw)
+                if leads_found is not None:
+                    total_leads_all_time += max(0, leads_found)
+    except Exception:
+        total_leads_all_time = 0
+
+    with tracking_store_lock:
+        total_emails_sent = len(tracking_store)
+
+    with JOBS_LOCK:
+        active_jobs = sum(
+            1 for job in JOBS.values() if str(job.get("status", "")).lower() == "running"
+        )
+
+    return GlobalStatsResponse(
+        total_leads_all_time=total_leads_all_time,
+        total_emails_sent=total_emails_sent,
+        active_jobs=active_jobs,
+    )
 
 
 @app.post("/hunt", response_model=HuntStartResponse)

@@ -3,6 +3,7 @@ import type {
   CampaignSummary,
   DemoSelfCorrectRequestPayload,
   DemoSelfCorrectResponse,
+  GlobalStatsResponse,
   HuntRequestPayload,
   HuntStopResponse,
   HuntStartResponse,
@@ -134,4 +135,8 @@ export async function getTrackingStatus(trackingId: string): Promise<TrackingSta
   return requestJson<TrackingStatusResponse>(
     `/track/${encodeURIComponent(trackingId)}/status`,
   );
+}
+
+export async function getGlobalStats(): Promise<GlobalStatsResponse> {
+  return requestJson<GlobalStatsResponse>("/stats/global");
 }

@@ -157,3 +157,9 @@ export interface TrackingStatusResponse {
   job_id: string | null;
   lead_id: number | null;
 }
+
+export interface GlobalStatsResponse {
+  total_leads_all_time: number;
+  total_emails_sent: number;
+  active_jobs: number;
+}
