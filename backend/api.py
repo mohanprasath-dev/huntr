@@ -75,6 +75,10 @@ def _build_result_summary(agent: str, action: str, payload: Any) -> str:
     if not isinstance(payload, dict) or not payload:
         return f"{agent} {action}"
 
+    explicit_summary = str(payload.get("result_summary") or "").strip()
+    if explicit_summary:
+        return explicit_summary
+
     if agent == "scout":
         found = _to_int(payload.get("found"))
         total_unique = _to_int(payload.get("total_unique"))
@@ -190,7 +194,7 @@ def _format_leads(leads: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return formatted
 
 
-def _run_hunt_job(job_id: str, config: dict[str, str]) -> None:
+def _run_hunt_job(job_id: str, config: dict[str, Any]) -> None:
     trace_path = Path(__file__).resolve().parent / "logs" / f"trace_{job_id}.json"
 
     with JOBS_LOCK:
@@ -287,9 +291,21 @@ class HuntRequest(BaseModel):
     sender_service: str = Field(..., min_length=1)
 
 
+class DemoSelfCorrectRequest(BaseModel):
+    sender_name: str = Field(..., min_length=1)
+    sender_company: str = Field(..., min_length=1)
+    sender_service: str = Field(..., min_length=1)
+
+
 class HuntStartResponse(BaseModel):
     job_id: str
     status: str
+
+
+class DemoSelfCorrectResponse(BaseModel):
+    job_id: str
+    status: str
+    demo_mode: bool
 
 
 class JobStatusResponse(BaseModel):
@@ -362,6 +378,39 @@ def run_hunt(request: HuntRequest) -> HuntStartResponse:
     worker = threading.Thread(target=_run_hunt_job, args=(job_id, config), daemon=True)
     worker.start()
     return HuntStartResponse(job_id=job_id, status="started")
+
+
+@app.post("/demo/self-correct", response_model=DemoSelfCorrectResponse)
+def run_demo_self_correct(request: DemoSelfCorrectRequest) -> DemoSelfCorrectResponse:
+    job_id = str(uuid4())
+    config: dict[str, Any] = {
+        "niche": "automation",
+        "pain_keyword": "x",
+        "sender_name": request.sender_name.strip(),
+        "sender_company": request.sender_company.strip(),
+        "sender_service": request.sender_service.strip(),
+        "demo_mode": True,
+    }
+
+    with JOBS_LOCK:
+        JOBS[job_id] = {
+            "job_id": job_id,
+            "status": "started",
+            "current_agent": "manager",
+            "leads_found": 0,
+            "leads_scored": 0,
+            "steps_completed": 0,
+            "events": [],
+            "raw_leads": [],
+            "leads": [],
+            "config": config,
+            "demo_mode": True,
+            "created_at": _now_iso(),
+        }
+
+    worker = threading.Thread(target=_run_hunt_job, args=(job_id, config), daemon=True)
+    worker.start()
+    return DemoSelfCorrectResponse(job_id=job_id, status="started", demo_mode=True)
 
 
 @app.get("/status/{job_id}", response_model=JobStatusResponse)
