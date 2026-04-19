@@ -5,7 +5,13 @@ import {
   getJobStatus,
   isApiRequestError,
 } from "@/lib/huntr-api";
-import type { CampaignDetail, JobImpact, JobStatusResponse, Lead } from "@/lib/huntr-types";
+import type {
+  CampaignDetail,
+  HuntRequestPayload,
+  JobImpact,
+  JobStatusResponse,
+  Lead,
+} from "@/lib/huntr-types";
 
 interface HuntPageProps {
   params: Promise<{
@@ -17,12 +23,42 @@ interface InitialDashboardData {
   initialLeads: Lead[];
   initialImpact: JobImpact | null;
   initialStatus: JobStatusResponse | null;
+  initialConfig: HuntRequestPayload | null;
   disablePolling: boolean;
 }
 
 function isTerminalStatus(status: string): boolean {
   const normalized = status.toLowerCase();
-  return normalized === "completed" || normalized === "failed";
+  return normalized === "completed" || normalized === "failed" || normalized === "stopped";
+}
+
+function toInitialConfig(campaign: CampaignDetail): HuntRequestPayload | null {
+  const config =
+    campaign.config && typeof campaign.config === "object"
+      ? (campaign.config as Record<string, unknown>)
+      : null;
+
+  if (!config) {
+    return null;
+  }
+
+  const niche = String(config.niche ?? "").trim();
+  const painKeyword = String(config.pain_keyword ?? "").trim();
+  const senderName = String(config.sender_name ?? "").trim();
+  const senderCompany = String(config.sender_company ?? "").trim();
+  const senderService = String(config.sender_service ?? "").trim();
+
+  if (!niche || !painKeyword || !senderName || !senderCompany || !senderService) {
+    return null;
+  }
+
+  return {
+    niche,
+    pain_keyword: painKeyword,
+    sender_name: senderName,
+    sender_company: senderCompany,
+    sender_service: senderService,
+  };
 }
 
 function buildStatusFromCampaign(jobId: string, campaign: CampaignDetail): JobStatusResponse {
@@ -49,6 +85,7 @@ async function getInitialDashboardData(jobId: string): Promise<InitialDashboardD
       initialLeads: Array.isArray(campaign.leads) ? campaign.leads : [],
       initialImpact: campaign.impact ?? null,
       initialStatus: status,
+      initialConfig: toInitialConfig(campaign),
       disablePolling: isTerminalStatus(String(status.status)),
     };
   } catch (error) {
@@ -90,6 +127,7 @@ async function getInitialDashboardData(jobId: string): Promise<InitialDashboardD
     initialLeads,
     initialImpact,
     initialStatus,
+    initialConfig: null,
     disablePolling: false,
   };
 }
@@ -104,6 +142,7 @@ export default async function HuntPage({ params }: HuntPageProps) {
       initialLeads={initialData.initialLeads}
       initialImpact={initialData.initialImpact}
       initialStatus={initialData.initialStatus}
+      initialConfig={initialData.initialConfig}
       disablePolling={initialData.disablePolling}
     />
   );

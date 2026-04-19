@@ -1,4 +1,4 @@
-export type JobStatus = "started" | "running" | "completed" | "failed" | "unknown";
+export type JobStatus = "started" | "running" | "completed" | "failed" | "stopped" | "unknown";
 
 export type AgentId =
   | "manager"
@@ -18,6 +18,11 @@ export interface HuntRequestPayload {
 }
 
 export interface HuntStartResponse {
+  job_id: string;
+  status: string;
+}
+
+export interface HuntStopResponse {
   job_id: string;
   status: string;
 }

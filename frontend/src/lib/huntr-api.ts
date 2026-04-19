@@ -4,6 +4,7 @@ import type {
   DemoSelfCorrectRequestPayload,
   DemoSelfCorrectResponse,
   HuntRequestPayload,
+  HuntStopResponse,
   HuntStartResponse,
   JobLeadsResponse,
   JobStatusResponse,
@@ -80,6 +81,12 @@ export async function startHunt(payload: HuntRequestPayload): Promise<HuntStartR
   return requestJson<HuntStartResponse>("/hunt", {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+export async function stopHunt(jobId: string): Promise<HuntStopResponse> {
+  return requestJson<HuntStopResponse>(`/hunt/${encodeURIComponent(jobId)}/stop`, {
+    method: "POST",
   });
 }
 

@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
-import { getStreamUrl } from "@/lib/huntr-api";
+import { getStreamUrl, stopHunt } from "@/lib/huntr-api";
 import type { StreamEvent } from "@/lib/huntr-types";
 
 interface AgentPipelineProps {
@@ -10,7 +10,8 @@ interface AgentPipelineProps {
 }
 
 type StreamState = "connecting" | "live" | "closed" | "error";
-type StagePhase = "inactive" | "active" | "complete";
+type SseStatus = "connecting" | "connected" | "running" | "closed" | "error";
+type StagePhase = "inactive" | "active" | "complete" | "cancelled";
 type SelfCorrectionBannerState = "hidden" | "triggered" | "resolved";
 
 const PIPELINE_STAGES = [
@@ -100,14 +101,17 @@ function stageTone(phase: StagePhase): string {
   if (phase === "complete") {
     return "border-emerald-400/45 bg-emerald-500/12 shadow-[0_0_22px_rgba(16,185,129,0.24)]";
   }
+  if (phase === "cancelled") {
+    return "border-white/14 bg-white/4 opacity-65";
+  }
   if (phase === "active") {
     return "border-accent/70 bg-accent/15 shadow-[0_0_0_1px_rgba(0,102,255,0.45)_inset,0_0_30px_rgba(0,102,255,0.55)] animate-pulse";
   }
   return "border-white/12 bg-white/5 opacity-55";
 }
 
-function streamStateTone(state: StreamState): string {
-  if (state === "live") {
+function streamStateTone(state: SseStatus): string {
+  if (state === "running" || state === "connected") {
     return "border-emerald-400/40 bg-emerald-500/10 text-emerald-200";
   }
   if (state === "error") {
@@ -119,9 +123,12 @@ function streamStateTone(state: StreamState): string {
   return "border-accent/40 bg-accent/15 text-blue-100";
 }
 
-function stateLabel(state: StreamState): string {
-  if (state === "live") {
-    return "SSE Live";
+function stateLabel(state: SseStatus): string {
+  if (state === "running") {
+    return "SSE Running";
+  }
+  if (state === "connected") {
+    return "SSE Connected";
   }
   if (state === "error") {
     return "SSE Error";
@@ -146,6 +153,8 @@ function formatTraceLine(event: StreamEvent): string {
 export default function AgentPipeline({ jobId }: AgentPipelineProps) {
   const [events, setEvents] = useState<StreamEvent[]>([]);
   const [streamState, setStreamState] = useState<StreamState>("connecting");
+  const [isStopping, setIsStopping] = useState(false);
+  const [stopError, setStopError] = useState("");
   const [selfCorrectionBannerState, setSelfCorrectionBannerState] =
     useState<SelfCorrectionBannerState>("hidden");
   const logContainerRef = useRef<HTMLDivElement | null>(null);
@@ -158,6 +167,8 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
     scoutAttemptCounterRef.current = 0;
     setEvents([]);
     setStreamState("connecting");
+    setIsStopping(false);
+    setStopError("");
     setSelfCorrectionBannerState("hidden");
 
     source.onopen = () => {
@@ -331,10 +342,71 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
       const agent = event.agent.toLowerCase();
       return (
         action === "stream_closed" ||
-        (agent === "manager" && (action === "ready" || action === "complete" || action === "failed"))
+        action === "hunt_stopped" ||
+        (agent === "manager" &&
+          (action === "ready" ||
+            action === "complete" ||
+            action === "failed" ||
+            action === "stopped"))
       );
     });
   }, [events, streamState]);
+
+  const isStoppedRun = useMemo(() => {
+    return events.some((event) => {
+      const action = event.action.toLowerCase();
+      const agent = event.agent.toLowerCase();
+      return action === "hunt_stopped" || (agent === "manager" && action === "stopped");
+    });
+  }, [events]);
+
+  const sseStatus = useMemo<SseStatus>(() => {
+    if (streamState === "error") {
+      return "error";
+    }
+    if (streamState === "closed") {
+      return "closed";
+    }
+    if (streamState === "connecting") {
+      return "connecting";
+    }
+
+    if (events.length === 0 || isTerminalRun) {
+      return "connected";
+    }
+
+    return "running";
+  }, [events.length, isTerminalRun, streamState]);
+
+  useEffect(() => {
+    if (!isStopping) {
+      return;
+    }
+
+    if (isStoppedRun || streamState === "closed" || streamState === "error") {
+      setIsStopping(false);
+    }
+  }, [isStopping, isStoppedRun, streamState]);
+
+  async function handleStop(): Promise<void> {
+    if (isStopping) {
+      return;
+    }
+
+    setIsStopping(true);
+    setStopError("");
+
+    try {
+      await stopHunt(jobId);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "Unable to stop hunt right now.";
+      setStopError(detail);
+      setIsStopping(false);
+    }
+  }
+
+  const showStopButton =
+    (sseStatus === "running" || sseStatus === "connected") && !isTerminalRun && !isStoppedRun;
 
   const terminalEvents = useMemo(() => events.slice(-180), [events]);
 
@@ -348,6 +420,17 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          {showStopButton ? (
+            <button
+              type="button"
+              onClick={handleStop}
+              disabled={isStopping}
+              className="rounded-md border border-red-500 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isStopping ? "Stopping..." : "⬛ Stop"}
+            </button>
+          ) : null}
+
           <div className="rounded-xl border border-accent/45 bg-[#07112a] px-4 py-2 text-right shadow-[0_0_24px_rgba(0,102,255,0.2)]">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-200/80">
               Total Leads Found
@@ -355,12 +438,24 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
             <p className="font-mono text-2xl font-semibold text-white">{totalLeadsFound}</p>
           </div>
           <span
-            className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${streamStateTone(streamState)}`}
+            className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${streamStateTone(sseStatus)}`}
           >
-            {stateLabel(streamState)}
+            {stateLabel(sseStatus)}
           </span>
         </div>
       </header>
+
+      {stopError ? (
+        <p className="mt-3 rounded-lg border border-rose-400/35 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+          {stopError}
+        </p>
+      ) : null}
+
+      {isStoppedRun ? (
+        <div className="mt-4 rounded-xl border border-amber-300/45 bg-amber-300/15 px-4 py-2 text-sm font-medium text-amber-100">
+          Hunt stopped — partial results available below
+        </div>
+      ) : null}
 
       {selfCorrectionBannerState !== "hidden" ? (
         <div
@@ -387,9 +482,18 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
                 (latestAgentIndex === -1 && index === 0 && streamState !== "error"));
             const isComplete =
               hasEvents &&
-              (isTerminalRun ? latestAgentIndex >= index || stageData.processed > 0 : latestAgentIndex > index);
+              (isStoppedRun ||
+                (isTerminalRun ? latestAgentIndex >= index || stageData.processed > 0 : latestAgentIndex > index));
 
-            const phase: StagePhase = isComplete ? "complete" : isActive ? "active" : "inactive";
+            const isCancelled = isStoppedRun && !isComplete;
+
+            const phase: StagePhase = isComplete
+              ? "complete"
+              : isActive
+                ? "active"
+                : isCancelled
+                  ? "cancelled"
+                  : "inactive";
 
             return (
               <Fragment key={stage.id}>
@@ -415,6 +519,8 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
                       <span className="font-semibold text-emerald-200">✓ Complete</span>
                     ) : phase === "active" ? (
                       <span className="font-semibold text-blue-100">Running...</span>
+                    ) : phase === "cancelled" ? (
+                      <span className="font-semibold text-white/55">Cancelled</span>
                     ) : (
                       <span className="text-white/50">Waiting</span>
                     )}

@@ -1,20 +1,34 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import AgentPipeline from "@/components/AgentPipeline";
 import ImpactBar from "@/components/ImpactBar";
 import LeadCard from "@/components/LeadCard";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import StatsBar from "@/components/StatsBar";
-import { HUNTR_API_BASE_URL, getJobLeads, getJobStatus } from "@/lib/huntr-api";
-import type { JobImpact, JobStatusResponse, Lead } from "@/lib/huntr-types";
+import {
+  HUNTR_API_BASE_URL,
+  getCampaignByJobId,
+  getJobLeads,
+  getJobStatus,
+  startHunt,
+} from "@/lib/huntr-api";
+import type {
+  CampaignDetail,
+  HuntRequestPayload,
+  JobImpact,
+  JobStatusResponse,
+  Lead,
+} from "@/lib/huntr-types";
 
 interface HuntDashboardProps {
   jobId: string;
   initialLeads?: Lead[];
   initialImpact?: JobImpact | null;
   initialStatus?: JobStatusResponse | null;
+  initialConfig?: HuntRequestPayload | null;
   disablePolling?: boolean;
 }
 
@@ -81,10 +95,42 @@ function statusTone(status: string): string {
   if (status === "failed") {
     return "border-rose-400/40 bg-rose-500/10 text-rose-100";
   }
+  if (status === "stopped") {
+    return "border-amber-400/40 bg-amber-500/10 text-amber-100";
+  }
   if (status === "running") {
     return "border-accent/40 bg-accent/15 text-blue-100";
   }
   return "border-white/20 bg-white/5 text-white/80";
+}
+
+function toResumeConfig(campaign: CampaignDetail): HuntRequestPayload | null {
+  const config =
+    campaign.config && typeof campaign.config === "object"
+      ? (campaign.config as Record<string, unknown>)
+      : null;
+
+  if (!config) {
+    return null;
+  }
+
+  const niche = String(config.niche ?? "").trim();
+  const painKeyword = String(config.pain_keyword ?? "").trim();
+  const senderName = String(config.sender_name ?? "").trim();
+  const senderCompany = String(config.sender_company ?? "").trim();
+  const senderService = String(config.sender_service ?? "").trim();
+
+  if (!niche || !painKeyword || !senderName || !senderCompany || !senderService) {
+    return null;
+  }
+
+  return {
+    niche,
+    pain_keyword: painKeyword,
+    sender_name: senderName,
+    sender_company: senderCompany,
+    sender_service: senderService,
+  };
 }
 
 export default function HuntDashboard({
@@ -92,11 +138,16 @@ export default function HuntDashboard({
   initialLeads = [],
   initialImpact = null,
   initialStatus = null,
+  initialConfig = null,
   disablePolling = false,
 }: HuntDashboardProps) {
+  const router = useRouter();
   const [status, setStatus] = useState<JobStatusResponse | null>(initialStatus);
   const [leads, setLeads] = useState<Lead[]>(initialLeads);
   const [impact, setImpact] = useState<JobImpact | null>(initialImpact);
+  const [resumeConfig, setResumeConfig] = useState<HuntRequestPayload | null>(initialConfig);
+  const [isResuming, setIsResuming] = useState(false);
+  const [resumeError, setResumeError] = useState("");
   const [sentLeadIds, setSentLeadIds] = useState<number[]>([]);
   const [scoreFilter, setScoreFilter] = useState<ScoreRangeFilter>("all");
   const [sourceFilter, setSourceFilter] = useState<"all" | LeadSource>("all");
@@ -130,8 +181,13 @@ export default function HuntDashboard({
         setImpact(nextLeads.impact ?? null);
         setError("");
 
+        const normalizedStatus = String(nextStatus.status || "").toLowerCase();
         const pollDelay =
-          nextStatus.status === "completed" || nextStatus.status === "failed" ? 4500 : 1800;
+          normalizedStatus === "completed" ||
+          normalizedStatus === "failed" ||
+          normalizedStatus === "stopped"
+            ? 4500
+            : 1800;
         nextTimer = setTimeout(refresh, pollDelay);
       } catch (refreshError) {
         if (!isMounted) {
@@ -160,6 +216,39 @@ export default function HuntDashboard({
       }
     };
   }, [disablePolling, jobId]);
+
+  const normalizedStatus = String(status?.status ?? "").toLowerCase();
+  const isStoppedStatus = normalizedStatus === "stopped";
+
+  useEffect(() => {
+    if (!isStoppedStatus || resumeConfig) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadConfig = async (): Promise<void> => {
+      try {
+        const campaign = await getCampaignByJobId(jobId);
+        if (!isMounted) {
+          return;
+        }
+
+        const nextConfig = toResumeConfig(campaign);
+        if (nextConfig) {
+          setResumeConfig(nextConfig);
+        }
+      } catch {
+        // Keep resume disabled when campaign config is unavailable.
+      }
+    };
+
+    loadConfig();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isStoppedStatus, jobId, resumeConfig]);
 
   const processedLeads = useMemo<LeadWithMeta[]>(() => {
     return leads
@@ -196,6 +285,24 @@ export default function HuntDashboard({
       }
       return [...current, leadId];
     });
+  }
+
+  async function handleResumeHunt(): Promise<void> {
+    if (!resumeConfig || isResuming) {
+      return;
+    }
+
+    setIsResuming(true);
+    setResumeError("");
+
+    try {
+      const nextRun = await startHunt(resumeConfig);
+      router.push(`/hunt/${nextRun.job_id}`);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "Unable to resume hunt right now.";
+      setResumeError(detail);
+      setIsResuming(false);
+    }
   }
 
   const statusLabel = String(status?.status ?? (isInitialLoading ? "loading" : "unknown"));
@@ -248,6 +355,33 @@ export default function HuntDashboard({
           ) : null}
         </div>
       </section>
+
+      {isStoppedStatus ? (
+        <section className="mb-6 rounded-2xl border border-amber-300/45 bg-amber-300/15 px-4 py-3 text-sm text-amber-100 md:px-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <p className="font-medium">This hunt was stopped early — showing partial results</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleResumeHunt}
+                disabled={isResuming || !resumeConfig}
+                className="rounded-md border border-amber-200/70 bg-amber-200/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-amber-50 transition hover:bg-amber-200/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isResuming ? "Resuming..." : "Resume Hunt"}
+              </button>
+              {!resumeConfig ? (
+                <span className="text-xs text-amber-100/85">Loading previous config...</span>
+              ) : null}
+            </div>
+          </div>
+
+          {resumeError ? (
+            <p className="mt-2 rounded-lg border border-rose-400/35 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+              {resumeError}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       <StatsBar
         leadsFound={status?.leads_found ?? 0}
