@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { getCampaignHistory } from "@/lib/huntr-api";
@@ -91,7 +92,7 @@ export default function CampaignHistory() {
     };
   }, []);
 
-  const recentCampaigns = useMemo(() => campaigns.slice(0, 5), [campaigns]);
+  const recentCampaigns = useMemo(() => campaigns.slice(0, 3), [campaigns]);
 
   if (isLoading) {
     return (
@@ -157,6 +158,15 @@ export default function CampaignHistory() {
             </button>
           );
         })}
+      </div>
+
+      <div className="pt-1">
+        <Link
+          href="/campaigns"
+          className="inline-flex items-center text-sm font-semibold text-accent transition hover:text-blue-300"
+        >
+          View all →
+        </Link>
       </div>
     </div>
   );

@@ -99,6 +99,7 @@ export interface CampaignSummary {
   status: JobStatus | string;
   leads_found?: number;
   leads_qualified?: number;
+  avg_score?: number;
 }
 
 export interface CampaignDetail {

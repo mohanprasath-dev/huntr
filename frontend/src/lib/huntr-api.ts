@@ -100,8 +100,12 @@ export async function getJobLeads(jobId: string): Promise<JobLeadsResponse> {
   return requestJson<JobLeadsResponse>(`/leads/${jobId}`);
 }
 
-export async function getCampaignHistory(): Promise<CampaignSummary[]> {
-  return requestJson<CampaignSummary[]>("/campaigns");
+export async function getCampaignHistory(limit?: number): Promise<CampaignSummary[]> {
+  const safeLimit =
+    typeof limit === "number" && Number.isFinite(limit) ? Math.max(1, Math.floor(limit)) : null;
+
+  const path = safeLimit ? `/campaigns?limit=${safeLimit}` : "/campaigns";
+  return requestJson<CampaignSummary[]>(path);
 }
 
 export async function getCampaignByJobId(jobId: string): Promise<CampaignDetail> {
