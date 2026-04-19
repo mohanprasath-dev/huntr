@@ -23,10 +23,11 @@ from job_state import JOBS, JOBS_LOCK
 
 from agents.manager import HuntRManager
 from db.campaign_store import get_campaign, list_campaigns, save_campaign
-from db.firestore_client import CAMPAIGNS_COLLECTION, db
+from db.firestore_client import CAMPAIGNS_COLLECTION, db, test_firestore_connection
 from tools.email_tool import BrevoEmailTool
 
 load_dotenv()
+test_firestore_connection()
 
 app = FastAPI(title="HuntR API", version="0.1.0")
 email_tool = BrevoEmailTool()
@@ -489,19 +490,31 @@ def _run_hunt_job(job_id: str, config: dict[str, Any]) -> None:
 
     if job_snapshot is not None:
         campaign = _build_campaign_from_job(job_id=job_id, job=job_snapshot)
-        trace_payload = dict(campaign.get("trace") or {})
-        trace_payload["raw_trace_events"] = _read_trace_events(trace_path)
+        config = dict(campaign.get("config") or {})
+        leads = list(campaign.get("leads") or [])
+        impact = dict(campaign.get("impact") or {})
+        trace = dict(campaign.get("trace") or {})
+        trace["raw_trace_events"] = _read_trace_events(trace_path)
 
-        print(f"[API] Saving campaign {job_id} to Firestore")
-        save_campaign(
-            job_id=job_id,
-            config=dict(campaign.get("config") or {}),
-            status=str(campaign.get("status") or "completed"),
-            leads=list(campaign.get("leads") or []),
-            impact=dict(campaign.get("impact") or {}),
-            trace=trace_payload,
-        )
-        print(f"[API] Campaign {job_id} saved to Firestore")
+        print(f"[API] Pipeline completed for job {job_id}")
+        print(f"[API] Leads count: {len(leads)}")
+        print(f"[API] Attempting Firestore save...")
+
+        try:
+            save_campaign(
+                job_id=job_id,
+                config=config,
+                status="completed",
+                leads=leads,
+                impact=impact,
+                trace=trace,
+            )
+            print(f"[API] Firestore save SUCCESS for job {job_id}")
+        except Exception as e:
+            print(f"[API] Firestore save FAILED: {e}")
+            import traceback
+
+            traceback.print_exc()
 
 
 class HuntRequest(BaseModel):

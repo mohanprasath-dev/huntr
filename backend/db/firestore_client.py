@@ -20,3 +20,18 @@ def _create_firestore_client() -> firestore.Client | None:
 
 
 db = _create_firestore_client()
+
+
+def test_firestore_connection():
+    try:
+        test_ref = db.collection("huntr_campaigns").document("test")
+        test_ref.set({"test": True, "timestamp": "2026-04-19"})
+        test_ref.delete()
+        print("[Firestore] Connection test PASSED")
+        return True
+    except Exception as e:
+        print(f"[Firestore] Connection test FAILED: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return False
