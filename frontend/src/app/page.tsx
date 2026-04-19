@@ -695,13 +695,32 @@ export default function LandingPage() {
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div>
             <p className="text-lg font-semibold lowercase text-black">huntr</p>
-            <p className="mt-1 text-sm text-gray-500">© 2026 HuntR by Mohan Prasath P · Built for Agentathon 2026</p>
+            <p className="mt-1 text-sm text-gray-500">
+              © 2026 HuntR by {" "}
+              <a
+                href="https://www.mohanprasath.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-inherit transition hover:underline"
+              >
+                Mohan Prasath P
+              </a>{" "}
+              · Built for Agentathon 2026
+            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
             <Link href="/build" className="transition hover:text-black">
               Build Story
             </Link>
+            <a
+              href="https://www.mohanprasath.dev"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition hover:text-black"
+            >
+              Portfolio
+            </a>
             <a
               href="https://github.com/mohanprasath-dev/huntr"
               target="_blank"

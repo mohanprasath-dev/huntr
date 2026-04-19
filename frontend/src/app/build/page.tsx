@@ -142,18 +142,32 @@ export default function BuildStoryPage() {
           </div>
         </section>
 
-        <footer className="mt-14 flex flex-col gap-3 border-t border-slate-200 pt-8 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
-          <Link href="/" className="font-medium text-slate-700 transition hover:text-slate-900">
-            Back to main site
-          </Link>
-          <a
-            href="https://github.com/mohanprasath-dev/huntr"
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium text-slate-700 transition hover:text-slate-900"
-          >
-            GitHub
-          </a>
+        <footer className="mt-14 flex flex-col gap-4 border-t border-slate-200 pt-8 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Built by</p>
+            <a
+              href="https://www.mohanprasath.dev"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 inline-block text-[#111827] underline"
+            >
+              Mohan Prasath P
+            </a>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <Link href="/" className="font-medium text-slate-700 transition hover:text-slate-900">
+              Back to main site
+            </Link>
+            <a
+              href="https://github.com/mohanprasath-dev"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-slate-700 transition hover:text-slate-900"
+            >
+              GitHub
+            </a>
+          </div>
         </footer>
       </div>
     </main>
