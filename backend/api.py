@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import csv
 import json
 import io
@@ -15,7 +16,7 @@ from uuid import uuid4
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 
 from agents.manager import HuntRManager
@@ -38,11 +39,19 @@ app.add_middleware(
 
 JOBS: dict[str, dict[str, Any]] = {}
 JOBS_LOCK = threading.Lock()
+tracking_store: dict[str, dict[str, Any]] = {}
+tracking_store_lock = threading.Lock()
 TERMINAL_STATUSES = {"completed", "failed"}
 TIME_SAVED_MINUTES_BASELINE = 180
 MANUAL_COST_PER_QUALIFIED_LEAD_INR = 840
 VS_MANUAL_SUMMARY = (
     "This would take a human 3+ hours of LinkedIn browsing, company research, and writing"
+)
+TRACKING_GIF_BYTES = base64.b64decode(
+    "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+)
+TRACKING_PIXEL_BASE_URL = (
+    "https://huntr-backend-1095027648976.us-central1.run.app"
 )
 LEADS_CSV_COLUMNS = [
     "company",
@@ -517,6 +526,7 @@ class SendLeadResponse(BaseModel):
     status: str
     provider: str
     recipient: str
+    tracking_id: str | None = None
     delivery_status: str | None = None
     detail: str | None = None
 
@@ -728,6 +738,7 @@ def send_for_lead(job_id: str, lead_id: int, request: SendLeadRequest) -> SendLe
             status="awaiting_approval",
             provider="brevo-smtp",
             recipient=request.to_email,
+            tracking_id=None,
             delivery_status="not_sent",
             detail="Lead not approved. Set approved=true to send.",
         )
@@ -748,13 +759,33 @@ def send_for_lead(job_id: str, lead_id: int, request: SendLeadRequest) -> SendLe
 
     sender_name = request.from_name or os.getenv("BREVO_SENDER_NAME", "HuntR")
     sender_email = request.from_email or os.getenv("BREVO_SENDER_EMAIL", "hello@huntr.ai")
+    tracking_id = str(uuid4())
+    tracking_pixel = (
+        f'<img src="{TRACKING_PIXEL_BASE_URL}/track/{tracking_id}" '
+        'width="1" height="1" style="display:none"/>'
+    )
+    body_with_tracking = f"{body}\n\n{tracking_pixel}"
+
     result = email_tool.send_email(
         to=recipient,
         subject=subject,
-        body=body,
+        body=body_with_tracking,
         from_name=sender_name,
         from_email=sender_email,
     )
+
+    stored_tracking_id: str | None = None
+    if str(result.get("status", "")).lower() == "sent":
+        sent_at = _now_iso()
+        with tracking_store_lock:
+            tracking_store[tracking_id] = {
+                "job_id": job_id,
+                "lead_id": lead_id,
+                "sent_at": sent_at,
+                "opened": False,
+                "opened_at": None,
+            }
+        stored_tracking_id = tracking_id
 
     _record_step(
         job_id=job_id,
@@ -771,6 +802,7 @@ def send_for_lead(job_id: str, lead_id: int, request: SendLeadRequest) -> SendLe
         status=str(result.get("status", "failed")),
         provider=str(result.get("provider", "brevo-smtp")),
         recipient=str(result.get("recipient", recipient)),
+        tracking_id=stored_tracking_id,
         delivery_status=(
             str(result.get("delivery_status"))
             if result.get("delivery_status") is not None
@@ -778,3 +810,38 @@ def send_for_lead(job_id: str, lead_id: int, request: SendLeadRequest) -> SendLe
         ),
         detail=(str(result.get("detail")) if result.get("detail") is not None else None),
     )
+
+
+@app.get("/track/{tracking_id}/status")
+def get_tracking_status(tracking_id: str) -> dict[str, Any]:
+    with tracking_store_lock:
+        tracking_data = tracking_store.get(tracking_id)
+        snapshot = dict(tracking_data) if tracking_data is not None else None
+
+    if snapshot is None:
+        return {
+            "tracking_id": tracking_id,
+            "opened": False,
+            "opened_at": None,
+            "job_id": None,
+            "lead_id": None,
+        }
+
+    return {
+        "tracking_id": tracking_id,
+        "opened": bool(snapshot.get("opened", False)),
+        "opened_at": snapshot.get("opened_at"),
+        "job_id": snapshot.get("job_id"),
+        "lead_id": snapshot.get("lead_id"),
+    }
+
+
+@app.get("/track/{tracking_id}")
+def track_email_open(tracking_id: str) -> Response:
+    with tracking_store_lock:
+        tracking_data = tracking_store.get(tracking_id)
+        if tracking_data is not None:
+            tracking_data["opened"] = True
+            tracking_data["opened_at"] = _now_iso()
+
+    return Response(content=TRACKING_GIF_BYTES, media_type="image/gif")
