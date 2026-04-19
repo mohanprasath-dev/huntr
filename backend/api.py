@@ -36,6 +36,11 @@ app.add_middleware(
 JOBS: dict[str, dict[str, Any]] = {}
 JOBS_LOCK = threading.Lock()
 TERMINAL_STATUSES = {"completed", "failed"}
+TIME_SAVED_MINUTES_BASELINE = 180
+MANUAL_COST_PER_QUALIFIED_LEAD_INR = 840
+VS_MANUAL_SUMMARY = (
+    "This would take a human 3+ hours of LinkedIn browsing, company research, and writing"
+)
 
 
 def _now_iso() -> str:
@@ -47,6 +52,19 @@ def _to_int(value: Any) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _pipeline_duration_seconds(job: dict[str, Any]) -> int:
+    stored_duration = _to_int(job.get("pipeline_duration_seconds"))
+    if stored_duration is not None and stored_duration >= 0:
+        return stored_duration
+
+    started_epoch = job.get("started_at_epoch")
+    completed_epoch = job.get("completed_at_epoch")
+    if isinstance(started_epoch, (int, float)) and isinstance(completed_epoch, (int, float)):
+        return max(0, int(completed_epoch - started_epoch))
+
+    return 0
 
 
 def _read_trace_events(trace_path: Path) -> list[dict[str, Any]]:
@@ -261,6 +279,8 @@ def _run_hunt_job(job_id: str, config: dict[str, Any]) -> None:
 
     raw_leads = result_box.get("leads") or []
     formatted = _format_leads(raw_leads)
+    completed_at_iso = _now_iso()
+    completed_at_epoch = time.time()
     with JOBS_LOCK:
         job = JOBS.get(job_id)
         if job is None:
@@ -268,6 +288,15 @@ def _run_hunt_job(job_id: str, config: dict[str, Any]) -> None:
         job["status"] = "completed"
         job["raw_leads"] = raw_leads
         job["leads"] = formatted
+        job["completed_at"] = completed_at_iso
+        job["completed_at_epoch"] = completed_at_epoch
+
+        started_at_epoch = job.get("started_at_epoch")
+        if isinstance(started_at_epoch, (int, float)):
+            job["pipeline_duration_seconds"] = max(0, int(completed_at_epoch - started_at_epoch))
+        else:
+            job["pipeline_duration_seconds"] = 0
+
         if int(job.get("leads_found", 0)) == 0:
             job["leads_found"] = len(raw_leads)
         if int(job.get("leads_scored", 0)) == 0:
@@ -318,8 +347,18 @@ class JobStatusResponse(BaseModel):
 
 
 class JobLeadsResponse(BaseModel):
+    class Impact(BaseModel):
+        time_saved_minutes: int
+        leads_found: int
+        leads_qualified: int
+        emails_personalized: int
+        manual_cost_inr: int
+        pipeline_duration_seconds: int
+        vs_manual: str
+
     job_id: str
     leads: list[dict[str, Any]]
+    impact: Impact
 
 
 class SendLeadRequest(BaseModel):
@@ -352,6 +391,7 @@ def health() -> dict[str, str]:
 @app.post("/hunt", response_model=HuntStartResponse)
 def run_hunt(request: HuntRequest) -> HuntStartResponse:
     job_id = str(uuid4())
+    started_at_epoch = time.time()
     config = {
         "niche": request.niche.strip(),
         "pain_keyword": request.pain_keyword.strip(),
@@ -373,6 +413,7 @@ def run_hunt(request: HuntRequest) -> HuntStartResponse:
             "leads": [],
             "config": config,
             "created_at": _now_iso(),
+            "started_at_epoch": started_at_epoch,
         }
 
     worker = threading.Thread(target=_run_hunt_job, args=(job_id, config), daemon=True)
@@ -383,6 +424,7 @@ def run_hunt(request: HuntRequest) -> HuntStartResponse:
 @app.post("/demo/self-correct", response_model=DemoSelfCorrectResponse)
 def run_demo_self_correct(request: DemoSelfCorrectRequest) -> DemoSelfCorrectResponse:
     job_id = str(uuid4())
+    started_at_epoch = time.time()
     config: dict[str, Any] = {
         "niche": "automation",
         "pain_keyword": "x",
@@ -406,6 +448,7 @@ def run_demo_self_correct(request: DemoSelfCorrectRequest) -> DemoSelfCorrectRes
             "config": config,
             "demo_mode": True,
             "created_at": _now_iso(),
+            "started_at_epoch": started_at_epoch,
         }
 
     worker = threading.Thread(target=_run_hunt_job, args=(job_id, config), daemon=True)
@@ -429,7 +472,23 @@ def get_status(job_id: str) -> JobStatusResponse:
 @app.get("/leads/{job_id}", response_model=JobLeadsResponse)
 def get_leads(job_id: str) -> JobLeadsResponse:
     job = _job_or_404(job_id)
-    return JobLeadsResponse(job_id=job_id, leads=list(job.get("leads", [])))
+    leads = list(job.get("leads", []))
+    leads_qualified = len(leads)
+    leads_found = int(job.get("leads_found", 0) or 0)
+
+    return JobLeadsResponse(
+        job_id=job_id,
+        leads=leads,
+        impact=JobLeadsResponse.Impact(
+            time_saved_minutes=TIME_SAVED_MINUTES_BASELINE,
+            leads_found=leads_found,
+            leads_qualified=leads_qualified,
+            emails_personalized=leads_qualified,
+            manual_cost_inr=leads_qualified * MANUAL_COST_PER_QUALIFIED_LEAD_INR,
+            pipeline_duration_seconds=_pipeline_duration_seconds(job),
+            vs_manual=VS_MANUAL_SUMMARY,
+        ),
+    )
 
 
 @app.get("/stream/{job_id}")
