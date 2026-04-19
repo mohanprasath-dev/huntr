@@ -339,12 +339,13 @@ export default function HuntDashboard({
           </div>
         ) : (
           <div className="grid gap-5">
-            {filteredLeads.map((item) => (
+            {filteredLeads.map((item, index) => (
               <LeadCard
                 key={`${item.lead.company}-${item.leadId}`}
                 jobId={jobId}
                 leadId={item.leadId}
                 lead={item.lead}
+                cardIndex={index}
                 alreadySent={sentLeadIds.includes(item.leadId)}
                 onSent={handleLeadSent}
               />

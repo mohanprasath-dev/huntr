@@ -10,6 +10,7 @@ interface LeadCardProps {
   jobId: string;
   leadId: number;
   lead: Lead;
+  cardIndex?: number;
   alreadySent: boolean;
   onSent: (leadId: number) => void;
 }
@@ -167,6 +168,7 @@ export default function LeadCard({
   jobId,
   leadId,
   lead,
+  cardIndex = 0,
   alreadySent,
   onSent,
 }: LeadCardProps) {
@@ -190,6 +192,16 @@ export default function LeadCard({
   const [openedAt, setOpenedAt] = useState<string | null>(null);
   const [openedBannerFlash, setOpenedBannerFlash] = useState(false);
   const [openedClockTick, setOpenedClockTick] = useState(() => Date.now());
+  const [animatedScore, setAnimatedScore] = useState(0);
+  const [scoreArcProgress, setScoreArcProgress] = useState(0);
+
+  const numericScore = Number(lead.score) || 0;
+  const targetArcProgress = Math.max(0, Math.min(100, numericScore)) / 100;
+  const scoreRingRadius = 18;
+  const scoreRingCircumference = 2 * Math.PI * scoreRingRadius;
+  const scoreStrokeOffset = scoreRingCircumference * (1 - scoreArcProgress);
+  const cardDelayMs = Math.max(0, cardIndex) * 100;
+  const isPipelineStageActive = sendState === "sending" || trackingState === "polling";
 
   useEffect(() => {
     setEmailSubject(lead.email_draft?.subject || "");
@@ -287,7 +299,43 @@ export default function LeadCard({
     };
   }, [trackingState]);
 
-  const scoreTone = useMemo(() => getScoreTone(Number(lead.score) || 0), [lead.score]);
+  useEffect(() => {
+    const durationMs = 800;
+    let rafId = 0;
+    let startTime: number | null = null;
+
+    setAnimatedScore(0);
+    setScoreArcProgress(0);
+
+    const animate = (timestamp: number): void => {
+      if (startTime === null) {
+        startTime = timestamp;
+      }
+
+      const elapsedMs = timestamp - startTime;
+      const progress = Math.min(1, elapsedMs / durationMs);
+      const easedProgress = 1 - Math.pow(1 - progress, 3);
+
+      setAnimatedScore(Math.round(numericScore * easedProgress));
+      setScoreArcProgress(targetArcProgress * easedProgress);
+
+      if (progress < 1) {
+        rafId = window.requestAnimationFrame(animate);
+        return;
+      }
+
+      setAnimatedScore(Math.round(numericScore));
+      setScoreArcProgress(targetArcProgress);
+    };
+
+    rafId = window.requestAnimationFrame(animate);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+    };
+  }, [leadId, numericScore, targetArcProgress]);
+
+  const scoreTone = useMemo(() => getScoreTone(numericScore), [numericScore]);
   const companySize = useMemo(() => deriveCompanySize(lead), [lead]);
   const decisionMaker = useMemo(() => parseDecisionMaker(lead), [lead]);
   const painPoint = useMemo(() => derivePainPoint(lead), [lead]);
@@ -352,14 +400,44 @@ export default function LeadCard({
   }
 
   return (
-    <article className="rounded-2xl border border-white/10 bg-panel p-5 shadow-[0_18px_40px_rgba(0,0,0,0.35)]">
+    <article
+      className={`lead-card-enter relative overflow-hidden rounded-2xl border border-white/10 bg-panel p-5 shadow-[0_18px_40px_rgba(0,0,0,0.35)] ${
+        isPipelineStageActive ? "lead-card-active-stage" : ""
+      }`}
+      style={{ animationDelay: `${cardDelayMs}ms` }}
+    >
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-white">{lead.company}</h3>
           <p className="mt-1 text-sm text-muted">Size: {companySize}</p>
         </div>
-        <div className={`rounded-full border px-3 py-1 text-sm font-semibold ${scoreTone}`}>
-          Score {lead.score}
+        <div className={`flex items-center gap-3 rounded-full border px-3 py-1 ${scoreTone}`}>
+          <div className="relative h-12 w-12">
+            <svg className="h-12 w-12 -rotate-90" viewBox="0 0 48 48" aria-hidden="true">
+              <circle cx="24" cy="24" r={scoreRingRadius} fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth="4" />
+              <circle
+                cx="24"
+                cy="24"
+                r={scoreRingRadius}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="4"
+                strokeLinecap="round"
+                style={{
+                  strokeDasharray: scoreRingCircumference,
+                  strokeDashoffset: scoreStrokeOffset,
+                  transition: "stroke-dashoffset 80ms linear",
+                }}
+              />
+            </svg>
+            <span className="absolute inset-0 grid place-items-center text-sm font-bold text-white">
+              {animatedScore}
+            </span>
+          </div>
+          <div className="leading-tight">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.15em]">Score</p>
+            <p className="text-xs text-white/80">Lead quality</p>
+          </div>
         </div>
       </header>
 
@@ -531,6 +609,91 @@ export default function LeadCard({
           </p>
         ) : null}
       </footer>
+
+      <style jsx>{`
+        .lead-card-enter {
+          animation: leadCardEnter 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+          will-change: transform, opacity;
+        }
+
+        .lead-card-active-stage {
+          box-shadow:
+            0 0 0 1px rgba(82, 165, 255, 0.45),
+            0 0 28px rgba(82, 165, 255, 0.35),
+            0 0 56px rgba(82, 165, 255, 0.22);
+        }
+
+        .lead-card-active-stage::before {
+          content: "";
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: -35%;
+          height: 35%;
+          background: linear-gradient(
+            180deg,
+            rgba(79, 151, 255, 0) 0%,
+            rgba(79, 151, 255, 0.16) 45%,
+            rgba(148, 199, 255, 0.24) 50%,
+            rgba(79, 151, 255, 0) 100%
+          );
+          mix-blend-mode: screen;
+          pointer-events: none;
+          animation: stageScanline 2.8s linear infinite;
+        }
+
+        .lead-card-active-stage::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          pointer-events: none;
+          box-shadow:
+            0 0 0 1px rgba(109, 182, 255, 0.55),
+            0 0 32px rgba(109, 182, 255, 0.42),
+            0 0 68px rgba(109, 182, 255, 0.28);
+          opacity: 0.35;
+          animation: activeStagePulse 1.8s ease-in-out infinite;
+        }
+
+        @keyframes leadCardEnter {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes stageScanline {
+          from {
+            transform: translateY(0);
+          }
+          to {
+            transform: translateY(400%);
+          }
+        }
+
+        @keyframes activeStagePulse {
+          0%,
+          100% {
+            opacity: 0.2;
+          }
+          50% {
+            opacity: 0.75;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .lead-card-enter,
+          .lead-card-active-stage::before,
+          .lead-card-active-stage::after {
+            animation: none;
+          }
+        }
+      `}</style>
     </article>
   );
 }
