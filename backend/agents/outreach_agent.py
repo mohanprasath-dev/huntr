@@ -13,6 +13,25 @@ except Exception:  # pragma: no cover - optional dependency at scaffold time
     GenerateContentConfig = None
 
 
+def get_greeting(decision_maker: str, company: str) -> str:
+    normalized_decision_maker = str(decision_maker or "").strip()
+    normalized_decision_maker = normalized_decision_maker.replace("View ", "").strip()
+    normalized_company = str(company or "Company").strip() or "Company"
+
+    if (
+        not normalized_decision_maker
+        or "Founder/CEO" in normalized_decision_maker
+        or "unknown" in normalized_decision_maker.lower()
+    ):
+        return f"Hi {normalized_company} Team,"
+
+    first_name = normalized_decision_maker.split()[0].strip().strip(",")
+    if not first_name:
+        return f"Hi {normalized_company} Team,"
+
+    return f"Hi {first_name},"
+
+
 # Model: gemini-2.5-pro (reasoning-heavy)
 class OutreachAgent:
     """Builds personalized outreach copy using Gemini on Vertex AI."""
@@ -339,12 +358,12 @@ class OutreachAgent:
         solution: str,
         cta: str,
     ) -> str:
-        recipient = context["decision_maker_name"] or "there"
+        greeting = get_greeting(context["decision_maker"], context["company_name"])
         sender_name = context["sender_name"]
         sender_company = context["sender_company"]
 
         return (
-            f"Hi {recipient},\n\n"
+            f"{greeting}\n\n"
             f"{self._ensure_sentence(opening)}\n"
             f"{problem}\n"
             f"{solution}\n"

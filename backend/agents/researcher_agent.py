@@ -8,6 +8,100 @@ from tools.serper_tool import SerperTool
 from tools.tavily_tool import TavilyTool
 
 
+def is_valid_person_name(name: str) -> bool:
+    if not name:
+        return False
+
+    normalized_name = name.strip()
+    if len(normalized_name) < 4 or len(normalized_name) > 50:
+        return False
+
+    for prefix in ["View ", "Connect with ", "Follow ", "Message "]:
+        if normalized_name.startswith(prefix):
+            return False
+
+    location_keywords = [
+        "bay",
+        "new york",
+        "san francisco",
+        "bangalore",
+        "mumbai",
+        "delhi",
+        "chennai",
+        "hyderabad",
+        "pune",
+        "london",
+        "boston",
+        "area",
+        "region",
+        "city",
+        "india",
+        "united states",
+    ]
+    name_lower = normalized_name.lower()
+    if any(location in name_lower for location in location_keywords):
+        return False
+
+    words = normalized_name.split()
+    if len(words) < 2:
+        return False
+
+    if not all(word and word[0].isupper() for word in words):
+        return False
+
+    if any(char.isdigit() for char in normalized_name):
+        return False
+
+    title_keywords = {
+        "ceo",
+        "founder",
+        "co-founder",
+        "cofounder",
+        "cto",
+        "cmo",
+        "cro",
+        "vp",
+        "head",
+        "director",
+        "manager",
+    }
+    if any(word.lower() in title_keywords for word in words):
+        return False
+
+    return True
+
+
+def is_valid_pain_point(pain: str) -> bool:
+    if not pain:
+        return False
+
+    normalized_pain = pain.strip()
+    if len(normalized_pain) < 10:
+        return False
+
+    invalid_patterns = [
+        r"^\d+\s",
+        r"top \d+",
+        r"best \d+",
+        r"\$\d+",
+        r"have secured",
+        r"raises? \$",
+        r"joins? \$",
+        r"hiring now",
+        r"join .+ as a",
+        r"discover all",
+        r"list of the",
+        r"explore how",
+    ]
+
+    pain_lower = normalized_pain.lower()
+    for pattern in invalid_patterns:
+        if re.search(pattern, pain_lower):
+            return False
+
+    return True
+
+
 # Model: gemini-2.5-flash (speed-optimized)
 class ResearcherAgent:
     """Lead Researcher: deep enriches each company with buying context."""
@@ -136,6 +230,7 @@ class ResearcherAgent:
             domain=company_domain,
         )
         decision_maker_name = str(decision_profile.get("name", "")).strip()
+        decision_maker_name = decision_maker_name.replace("View ", "").strip()
         decision_maker_title = str(decision_profile.get("title", "")).strip()
         linkedin_url = str(decision_profile.get("url", "")).strip()
 
@@ -143,7 +238,9 @@ class ResearcherAgent:
         tech_stack = self._infer_tech_stack(website_results + activity_results)
         pain_point = self._infer_pain_point(lead=lead, research_results=website_results + activity_results)
         decision_maker = decision_maker_name or "Founder/CEO (name unknown)"
-        if self._is_invalid_decision_maker_name(decision_maker):
+        if not is_valid_person_name(decision_maker) or self._is_invalid_decision_maker_name(
+            decision_maker
+        ):
             decision_maker = "Founder/CEO (name unknown)"
             linkedin_url = ""
         email_hint, email_hint_confidence, email_search_results = self._infer_email_hint(
@@ -228,8 +325,9 @@ class ResearcherAgent:
         research_results: list[dict[str, Any]],
     ) -> str:
         lead_signal = str(lead.get("pain_signal") or "").strip()
+        candidate_pain = ""
         if lead_signal:
-            return lead_signal[:240]
+            candidate_pain = lead_signal[:240]
 
         pain_markers = (
             "manual",
@@ -241,13 +339,24 @@ class ResearcherAgent:
             "conversion",
             "hiring",
         )
-        for item in research_results:
-            content = str(item.get("content", "")).strip()
-            lowered = content.lower()
-            if any(marker in lowered for marker in pain_markers):
-                return content[:240]
+        if not candidate_pain:
+            for item in research_results:
+                content = str(item.get("content", "")).strip()
+                lowered = content.lower()
+                if any(marker in lowered for marker in pain_markers):
+                    candidate_pain = content[:240]
+                    break
 
-        return "No explicit pain point found"
+        if not candidate_pain:
+            candidate_pain = "No explicit pain point found"
+
+        if is_valid_pain_point(candidate_pain):
+            return candidate_pain
+
+        company_name = str(lead.get("company_name") or lead.get("company") or "this company").strip()
+        if not company_name:
+            company_name = "this company"
+        return f"Likely needs AI automation for {company_name}'s workflow"
 
     def _find_decision_maker_profile(self, company_name: str, domain: str) -> dict[str, str]:
         if not domain:

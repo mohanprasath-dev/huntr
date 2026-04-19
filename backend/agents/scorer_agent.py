@@ -61,6 +61,14 @@ class ScorerAgent:
         "techcrunch.com",
         "forbes.com",
         "inc.com",
+        "facebook.com",
+        "tracxn.com",
+        "punestartups.org",
+        "jobs.punestartups.org",
+        "analyticsindiamag.com",
+        "f6s.com",
+        "wellfound.com",
+        "unleashx.ai",
     }
     _INDIA_LOCATION_KEYWORDS = {
         "india",
@@ -133,6 +141,7 @@ class ScorerAgent:
             scored["tier"] = "D"
             scored["qualified"] = False
             scored["discarded"] = True
+            scored["discard"] = True
             scored["reasoning"] = (
                 f"Discarded as non-target lead (blocklisted domain match: {blocked_domain})"
             )
@@ -191,6 +200,7 @@ class ScorerAgent:
         scored["tier"] = tier
         scored["qualified"] = (not discarded) and adjusted_total >= self.MIN_QUALIFIED_SCORE
         scored["discarded"] = discarded
+        scored["discard"] = discarded
         scored["reasoning"] = reasoning
         scored["score_breakdown"] = {
             "base_score": self.BASE_SCORE,

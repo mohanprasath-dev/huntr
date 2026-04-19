@@ -538,24 +538,10 @@ export default function LeadCard({
                 </span>
 
                 <div className="flex items-start justify-between gap-3 pl-6">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <div className="inline-grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#e5e7eb] text-[#4b5563]">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        className="h-5 w-5"
-                        aria-hidden="true"
-                      >
-                        <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4 0-7 2-7 4.5a.75.75 0 0 0 1.5 0c0-1.37 2.22-3 5.5-3s5.5 1.63 5.5 3a.75.75 0 0 0 1.5 0C19 16 16 14 12 14Z" />
-                      </svg>
-                    </div>
-
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[#111827]">{decisionMaker.name}</p>
-                      <p className="mt-0.5 truncate text-xs text-[#6b7280]">{decisionMaker.title}</p>
-                      <p className="mt-2 text-xs text-[#6b7280]">{String(lead.company || "Unknown Company")}</p>
-                    </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[#111827]">{decisionMaker.name}</p>
+                    <p className="mt-0.5 truncate text-xs text-[#6b7280]">{decisionMaker.title}</p>
+                    <p className="mt-2 text-xs text-[#6b7280]">{String(lead.company || "Unknown Company")}</p>
                   </div>
 
                   <a
