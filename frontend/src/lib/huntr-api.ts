@@ -14,7 +14,7 @@ import type {
   TrackingStatusResponse,
 } from "@/lib/huntr-types";
 
-const DEFAULT_API_BASE_URL = "http://localhost:8000";
+const DEFAULT_API_BASE_URL = "https://huntr-backend-1095027648976.us-central1.run.app";
 
 export const HUNTR_API_BASE_URL =
   process.env.NEXT_PUBLIC_HUNTR_API_BASE_URL?.replace(/\/$/, "") ?? DEFAULT_API_BASE_URL;
