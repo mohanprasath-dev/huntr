@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 
 import AgentPipeline from "@/components/AgentPipeline";
+import ImpactBar from "@/components/ImpactBar";
 import LeadCard from "@/components/LeadCard";
 import StatsBar from "@/components/StatsBar";
 import { getJobLeads, getJobStatus } from "@/lib/huntr-api";
-import type { JobStatusResponse, Lead } from "@/lib/huntr-types";
+import type { JobImpact, JobStatusResponse, Lead } from "@/lib/huntr-types";
 
 interface HuntDashboardProps {
   jobId: string;
@@ -84,6 +85,7 @@ function statusTone(status: string): string {
 export default function HuntDashboard({ jobId }: HuntDashboardProps) {
   const [status, setStatus] = useState<JobStatusResponse | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [impact, setImpact] = useState<JobImpact | null>(null);
   const [sentLeadIds, setSentLeadIds] = useState<number[]>([]);
   const [scoreFilter, setScoreFilter] = useState<ScoreRangeFilter>("all");
   const [sourceFilter, setSourceFilter] = useState<"all" | LeadSource>("all");
@@ -107,6 +109,7 @@ export default function HuntDashboard({ jobId }: HuntDashboardProps) {
 
         setStatus(nextStatus);
         setLeads(nextLeads.leads ?? []);
+        setImpact(nextLeads.impact ?? null);
         setError("");
 
         const pollDelay =
@@ -211,6 +214,12 @@ export default function HuntDashboard({ jobId }: HuntDashboardProps) {
         emailsReady={emailsReady}
         sentCount={sentLeadIds.length}
       />
+
+      {status?.status === "completed" && impact ? (
+        <div className="mt-6">
+          <ImpactBar impact={impact} />
+        </div>
+      ) : null}
 
       <div className="mt-6">
         <AgentPipeline jobId={jobId} />

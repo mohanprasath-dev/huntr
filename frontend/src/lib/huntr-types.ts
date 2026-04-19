@@ -74,9 +74,20 @@ export interface Lead {
   followup_sequence: FollowupItem[];
 }
 
+export interface JobImpact {
+  time_saved_minutes: number;
+  leads_found: number;
+  leads_qualified: number;
+  emails_personalized: number;
+  manual_cost_inr: number;
+  pipeline_duration_seconds: number;
+  vs_manual: string;
+}
+
 export interface JobLeadsResponse {
   job_id: string;
   leads: Lead[];
+  impact: JobImpact;
 }
 
 export interface StreamEvent {
