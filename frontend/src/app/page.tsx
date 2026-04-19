@@ -445,11 +445,46 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="border-y border-gray-200 bg-white py-8">
+        <div className="mx-auto grid w-full max-w-4xl gap-8 px-4 text-center sm:px-6 md:grid-cols-2 md:text-left lg:px-8">
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-gray-500">Built by</p>
+            <p className="text-lg font-bold text-[#111827]">Mohan Prasath P</p>
+            <p className="text-sm text-[#6b7280]">N25C01A0047 · NIAT X Crescent</p>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2 md:justify-start">
+              <a
+                href="https://github.com/mohanprasath-dev"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex rounded-full border border-gray-300 px-3 py-1 text-xs font-medium text-gray-600 transition hover:border-gray-400 hover:text-gray-800"
+              >
+                GitHub
+              </a>
+              <a
+                href="https://linkein.com/mohanprasath21"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex rounded-full border border-gray-300 px-3 py-1 text-xs font-medium text-gray-600 transition hover:border-gray-400 hover:text-gray-800"
+              >
+                LinkedIn
+              </a>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-gray-500">Built for</p>
+            <p className="text-lg font-bold text-[#111827]">Agentathon 2026</p>
+            <p className="text-sm text-[#6b7280]">NIAT Hackathon</p>
+            <p className="text-xs text-[#9ca3af]">April 2026</p>
+          </div>
+        </div>
+      </section>
+
       <footer className="border-t border-gray-200 bg-white py-8">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div>
             <p className="text-lg font-semibold lowercase text-black">huntr</p>
-            <p className="mt-1 text-sm text-gray-500">© 2026 HuntR. Built for Agentathon 2026.</p>
+            <p className="mt-1 text-sm text-gray-500">© 2026 HuntR by Mohan Prasath P · Built for Agentathon 2026</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
