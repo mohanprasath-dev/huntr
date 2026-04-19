@@ -5,48 +5,78 @@ import { useEffect, useRef, useState } from "react";
 
 const AGENT_CARDS = [
   {
+    id: "00",
+    name: "Manager",
+    description:
+      "Orchestrates every stage, handles retries, and keeps the full hunt pipeline aligned",
+    modelBadge: "Pro ✦",
+    modelTier: "pro",
+  },
+  {
     id: "01",
     name: "Scout",
     description:
       "Finds 20+ leads showing real pain signals across LinkedIn, Reddit and IndiaMART",
+    modelBadge: "Flash ⚡",
+    modelTier: "flash",
   },
   {
     id: "02",
     name: "Researcher",
     description:
       "Enriches each lead with company data, decision maker name and email",
+    modelBadge: "Flash ⚡",
+    modelTier: "flash",
   },
   {
     id: "03",
     name: "Scorer",
     description:
       "Ranks leads 1-100 based on fit, urgency and budget signals",
+    modelBadge: "Flash ⚡",
+    modelTier: "flash",
   },
   {
     id: "04",
     name: "Outreach",
     description:
       "Writes a hyper-personalized email and LinkedIn message for each lead",
+    modelBadge: "Pro ✦",
+    modelTier: "pro",
   },
   {
     id: "05",
     name: "Followup",
     description:
       "Builds a Day 3, 7, 14 follow-up sequence automatically",
+    modelBadge: "Flash ⚡",
+    modelTier: "flash",
   },
-];
+] as const;
 
 const IMPACT_TARGETS = [2, 5, 0, 3];
 
-const TECH_STACK = [
-  "Google ADK",
-  "Gemini 2.5 Flash",
-  "Vertex AI",
-  "FastAPI",
-  "Cloud Run",
-  "Firestore",
-  "Next.js",
-  "Vercel",
+const TECH_STACK: Array<{
+  label: string;
+  tone?: "pro";
+  title?: string;
+}> = [
+  { label: "Google ADK" },
+  {
+    label: "Gemini 2.5 Pro",
+    tone: "pro",
+    title: "Used for reasoning & outreach generation",
+  },
+  {
+    label: "Gemini 2.5 Flash",
+    title: "Used for scouting, research & scoring",
+  },
+  { label: "Vertex AI" },
+  { label: "FastAPI" },
+  { label: "Cloud Run" },
+  { label: "Firestore" },
+  { label: "Next.js" },
+  { label: "Vercel" },
 ];
 
 function renderImpactValue(index: number, value: number): string {
@@ -63,6 +93,15 @@ function renderImpactValue(index: number, value: number): string {
 }
 
 function AgentIcon({ id }: { id: string }) {
+  if (id === "00") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4">
+        <circle cx="12" cy="12" r="2.5" />
+        <path d="M12 4.5v3M12 16.5v3M4.5 12h3M16.5 12h3M6.7 6.7l2.1 2.1M15.2 15.2l2.1 2.1M17.3 6.7l-2.1 2.1M8.8 15.2l-2.1 2.1" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
   if (id === "01") {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4">
@@ -258,7 +297,7 @@ export default function LandingPage() {
       <section ref={heroRef} className="flex min-h-screen items-center bg-white pb-14 pt-28 sm:pb-16">
         <div className="mx-auto w-full max-w-6xl px-4 text-center sm:px-6 lg:px-8">
           <p className="mx-auto inline-flex rounded-full border border-gray-300 px-3 py-1 text-xs font-medium text-gray-600">
-            Powered by Google ADK + Gemini 2.5
+            Powered by Gemini 2.5 Pro + Flash · Google ADK
           </p>
 
           <h1
@@ -312,13 +351,13 @@ export default function LandingPage() {
       <section id="how-it-works" ref={cardsRef} className="bg-white py-20 sm:py-24">
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
           <h2 className="text-center text-3xl font-semibold tracking-tight text-black md:text-5xl">
-            Five agents. One goal.
+            Six agents. One goal.
           </h2>
           <p className="mx-auto mt-4 max-w-3xl text-center text-base text-gray-600 md:text-lg">
             Each agent is specialized. Together, they replace your entire outbound sales process.
           </p>
 
-          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {AGENT_CARDS.map((card, index) => (
               <article
                 key={card.id}
@@ -336,6 +375,15 @@ export default function LandingPage() {
                     <AgentIcon id={card.id} />
                   </div>
                   <h3 className="mt-4 text-lg font-semibold text-black">{card.name}</h3>
+                  <span
+                    className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                      card.modelTier === "pro"
+                        ? "bg-[#eff6ff] text-[#1d4ed8]"
+                        : "bg-[#f3f4f6] text-[#6b7280]"
+                    }`}
+                  >
+                    {card.modelBadge}
+                  </span>
                   <p className="mt-2 text-sm leading-relaxed text-gray-600">{card.description}</p>
                 </div>
               </article>
@@ -421,10 +469,15 @@ export default function LandingPage() {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             {TECH_STACK.map((tech) => (
               <span
-                key={tech}
-                className="inline-flex rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700"
+                key={tech.label}
+                title={tech.title}
+                className={`inline-flex rounded-full border bg-white px-4 py-2 text-sm font-medium ${
+                  tech.tone === "pro"
+                    ? "border-[#93c5fd] text-[#1d4ed8]"
+                    : "border-gray-300 text-gray-700"
+                }`}
               >
-                {tech}
+                {tech.label}
               </span>
             ))}
           </div>

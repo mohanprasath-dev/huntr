@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 
+# Model: gemini-2.5-flash (speed-optimized)
 class FollowupAgent:
     """Creates a multi-step follow-up plan for each qualified lead."""
 

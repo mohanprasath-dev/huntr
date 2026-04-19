@@ -31,7 +31,8 @@ _REQUIRED_VERTEX_ENV_VARS = (
     "GOOGLE_CLOUD_PROJECT",
     "GOOGLE_CLOUD_LOCATION",
 )
-_GEMINI_MODEL = "gemini-2.5-flash"
+_GEMINI_FLASH_MODEL = "gemini-2.5-flash"
+_GEMINI_PRO_MODEL = "gemini-2.5-pro"
 _MIN_SCOUT_LEADS = 5
 _PRIMARY_SCORE_THRESHOLD = 60
 _FALLBACK_SCORE_THRESHOLD = 50
@@ -78,15 +79,17 @@ def _load_vertex_settings() -> tuple[str, str]:
     return project, location
 
 
-def _build_gemini_llm() -> Gemini:
+def _build_gemini_llms() -> tuple[Gemini, Gemini]:
     project, location = _load_vertex_settings()
     aiplatform.init(project=project, location=location)
-    return Gemini(model=_GEMINI_MODEL)
+    return Gemini(model=_GEMINI_FLASH_MODEL), Gemini(model=_GEMINI_PRO_MODEL)
 
 
-gemini_llm = _build_gemini_llm()
+gemini_flash, gemini_pro = _build_gemini_llms()
+gemini_llm = gemini_pro
 
 
+# Model: gemini-2.5-pro (reasoning-heavy)
 class HuntRManager:
     """Orchestrates HuntR's multi-agent client acquisition pipeline."""
 
@@ -100,12 +103,18 @@ class HuntRManager:
         llm: Any | None = None,
         trace_path: Path | None = None,
     ) -> None:
-        self.gemini_llm = llm or gemini_llm
-        self.scout = scout or ScoutAgent(gemini_llm=self.gemini_llm)
-        self.researcher = researcher or ResearcherAgent(gemini_llm=self.gemini_llm)
-        self.scorer = scorer or ScorerAgent(gemini_llm=self.gemini_llm)
-        self.outreach = outreach or OutreachAgent(gemini_llm=self.gemini_llm)
-        self.followup = followup or FollowupAgent(gemini_llm=self.gemini_llm)
+        flash_llm = llm or gemini_flash
+        pro_llm = llm or gemini_pro
+
+        self.gemini_flash = flash_llm
+        self.gemini_pro = pro_llm
+        self.gemini_llm = pro_llm
+
+        self.scout = scout or ScoutAgent(gemini_llm=flash_llm)
+        self.researcher = researcher or ResearcherAgent(gemini_llm=flash_llm)
+        self.scorer = scorer or ScorerAgent(gemini_llm=flash_llm)
+        self.outreach = outreach or OutreachAgent(model=_GEMINI_PRO_MODEL, gemini_llm=pro_llm)
+        self.followup = followup or FollowupAgent(gemini_llm=flash_llm)
         self.trace_path = trace_path or _TRACE_LOG_PATH
 
     def run_pipeline(self, niche: str, max_leads: int = 10) -> list[dict[str, Any]]:
@@ -548,4 +557,4 @@ def run_huntr(
     return manager.run_huntr(config=config, max_leads=max_leads, job_id=job_id)
 
 
-__all__ = ["HuntRManager", "gemini_llm", "run_huntr"]
+__all__ = ["HuntRManager", "gemini_flash", "gemini_pro", "gemini_llm", "run_huntr"]

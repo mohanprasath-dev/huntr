@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 
+# Model: gemini-2.5-flash (speed-optimized)
 class ScorerAgent:
     """Lead Scorer: ranks enriched leads against a 100-point qualification rubric."""
 

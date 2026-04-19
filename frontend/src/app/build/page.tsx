@@ -11,7 +11,7 @@ const TIMELINE_ENTRIES = [
     time: "Hour 1",
     title: "Core Agent Pipeline",
     description:
-      "Built 5 specialized Google ADK agents: Scout, Researcher, Scorer, Outreach, and Followup. Connected Serper and Tavily for real-time web intelligence. First end-to-end lead generated in terminal.",
+      "Built 5 specialized Google ADK agents: Scout, Researcher, Scorer, Outreach, and Followup. Connected Serper and Tavily for real-time web intelligence. First end-to-end lead generated in terminal. Configured dual-model setup: Gemini 2.5 Pro for reasoning-heavy agents, Gemini 2.5 Flash for speed-optimized agents.",
   },
   {
     time: "Hour 2",
@@ -43,7 +43,7 @@ const TECH_DECISIONS = [
   {
     title: "Why Google ADK over CrewAI",
     description:
-      "Google ADK was directly taught in our NIAT curriculum and integrates natively with Vertex AI Gemini 2.5 Flash - giving us enterprise-grade reasoning without additional cost.",
+      "Google ADK was directly taught in our NIAT curriculum and integrates natively with Vertex AI Gemini 2.5. We use Gemini 2.5 Pro for the Manager and Outreach agents where reasoning quality matters most, and Gemini 2.5 Flash for Scout, Researcher, Scorer and Followup where speed is the priority.",
   },
   {
     title: "Why SSE over WebSockets",
@@ -54,6 +54,11 @@ const TECH_DECISIONS = [
     title: "Why Firestore over PostgreSQL",
     description:
       "Firestore's schemaless nature matched our evolving lead data structure. Zero configuration, auto-scaling, native GCP integration.",
+  },
+  {
+    title: "Why two Gemini models instead of one",
+    description:
+      "Gemini 2.5 Pro produces noticeably better cold email personalization and orchestration reasoning. Gemini 2.5 Flash is 10x cheaper and fast enough for structured data extraction. Using both optimizes quality where it matters and speed everywhere else.",
   },
 ] as const;
 
@@ -111,7 +116,7 @@ export default function BuildStoryPage() {
             Key technical decisions
           </h2>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {TECH_DECISIONS.map((decision) => (
               <article
                 key={decision.title}

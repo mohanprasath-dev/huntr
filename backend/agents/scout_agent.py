@@ -8,6 +8,7 @@ from tools.serper_tool import SerperTool
 from tools.tavily_tool import TavilyTool
 
 
+# Model: gemini-2.5-flash (speed-optimized)
 class ScoutAgent:
     """Lead Scout: discovers raw B2B leads that show pain signals."""
 

@@ -19,6 +19,9 @@ export default function Home() {
               Configure your campaign once, then watch five specialized agents discover, qualify,
               and draft outbound for your highest-intent prospects in real time.
             </p>
+            <p className="mt-3 max-w-2xl font-mono text-xs text-[#9ca3af]">
+              Manager + Outreach → Gemini 2.5 Pro · Scout + Researcher + Scorer → Gemini 2.5 Flash
+            </p>
 
             <div className="mt-7">
               <LiveStats />

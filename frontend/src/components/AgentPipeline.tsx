@@ -20,30 +20,40 @@ const PIPELINE_STAGES = [
     emoji: "🔍",
     title: "Scout",
     detail: "Discovers candidate companies with pain signals.",
+    modelBadge: "Flash ⚡",
+    modelTier: "flash",
   },
   {
     id: "researcher",
     emoji: "🧠",
     title: "Researcher",
     detail: "Enriches each lead with context and decision makers.",
+    modelBadge: "Flash ⚡",
+    modelTier: "flash",
   },
   {
     id: "scorer",
     emoji: "📊",
     title: "Scorer",
     detail: "Applies qualification scoring to prioritize opportunities.",
+    modelBadge: "Flash ⚡",
+    modelTier: "flash",
   },
   {
     id: "outreach",
     emoji: "✍️",
     title: "Outreach",
     detail: "Generates tailored email and LinkedIn first-touch drafts.",
+    modelBadge: "Pro ✦",
+    modelTier: "pro",
   },
   {
     id: "followup",
     emoji: "📬",
     title: "Followup",
     detail: "Builds Day 3, 7, and 14 follow-up sequence.",
+    modelBadge: "Flash ⚡",
+    modelTier: "flash",
   },
 ] as const;
 
@@ -503,18 +513,29 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
                   className={`relative w-56 shrink-0 rounded-xl border p-4 transition-all duration-300 sm:w-60 ${stageTone(phase)}`}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <p
-                      className={`text-base font-semibold ${
-                        phase === "complete"
-                          ? "text-[#166534]"
-                          : phase === "active"
-                            ? "text-[#0066ff]"
-                            : "text-[#9ca3af]"
-                      }`}
-                    >
-                      <span className="mr-2">{stage.emoji}</span>
-                      {stage.title}
-                    </p>
+                    <div>
+                      <p
+                        className={`text-base font-semibold ${
+                          phase === "complete"
+                            ? "text-[#166534]"
+                            : phase === "active"
+                              ? "text-[#0066ff]"
+                              : "text-[#9ca3af]"
+                        }`}
+                      >
+                        <span className="mr-2">{stage.emoji}</span>
+                        {stage.title}
+                      </p>
+                      <span
+                        className={`mt-1 inline-flex rounded-full px-1.5 py-0.5 text-xs font-medium ${
+                          stage.modelTier === "pro"
+                            ? "bg-[#eff6ff] text-[#1d4ed8]"
+                            : "bg-[#f3f4f6] text-[#6b7280]"
+                        }`}
+                      >
+                        {stage.modelBadge}
+                      </span>
+                    </div>
                     {stageData.retried ? (
                       <span className="rounded-full border border-[#f59e0b] bg-[#fff7ed] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b45309]">
                         Retried

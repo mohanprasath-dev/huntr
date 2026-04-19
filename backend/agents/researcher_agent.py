@@ -8,6 +8,7 @@ from tools.serper_tool import SerperTool
 from tools.tavily_tool import TavilyTool
 
 
+# Model: gemini-2.5-flash (speed-optimized)
 class ResearcherAgent:
     """Lead Researcher: deep enriches each company with buying context."""
 

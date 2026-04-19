@@ -13,6 +13,7 @@ except Exception:  # pragma: no cover - optional dependency at scaffold time
     GenerateContentConfig = None
 
 
+# Model: gemini-2.5-pro (reasoning-heavy)
 class OutreachAgent:
     """Builds personalized outreach copy using Gemini on Vertex AI."""
 
@@ -33,7 +34,7 @@ class OutreachAgent:
 
     def __init__(
         self,
-        model: str = "gemini-2.5-flash",
+        model: str = "gemini-2.5-pro",
         gemini_llm: Any | None = None,
     ) -> None:
         self.model = model
