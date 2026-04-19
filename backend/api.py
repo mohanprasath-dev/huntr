@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -574,6 +575,17 @@ class GlobalStatsResponse(BaseModel):
     active_jobs: int
 
 
+class FeedbackRequest(BaseModel):
+    page: str = Field(..., min_length=1)
+    rating: int = Field(..., ge=1, le=5)
+    feedback: str = Field(..., min_length=1)
+    email: str = Field(default="")
+
+
+class FeedbackResponse(BaseModel):
+    status: str
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {
@@ -617,6 +629,30 @@ def get_global_stats() -> GlobalStatsResponse:
         total_emails_sent=total_emails_sent,
         active_jobs=active_jobs,
     )
+
+
+@app.post("/feedback", response_model=FeedbackResponse)
+def submit_feedback(body: FeedbackRequest) -> FeedbackResponse:
+    apps_script_url = os.getenv("APPS_SCRIPT_URL", "").strip()
+    if not apps_script_url:
+        raise HTTPException(status_code=500, detail="APPS_SCRIPT_URL is not configured.")
+
+    try:
+        response = requests.post(
+            apps_script_url,
+            data={
+                "page": body.page,
+                "rating": str(body.rating),
+                "feedback": body.feedback,
+                "email": body.email,
+            },
+            timeout=10,
+        )
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=500, detail=f"Feedback proxy failed: {exc}") from exc
+
+    return FeedbackResponse(status="success")
 
 
 @app.post("/hunt", response_model=HuntStartResponse)

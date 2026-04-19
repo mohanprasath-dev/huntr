@@ -1,29 +1,11 @@
 "use client";
 
-/*
-  APPS SCRIPT CODE (replace existing script with this):
-
-  function doPost(e) {
-    const sheet = SpreadsheetApp
-      .getActiveSpreadsheet()
-      .getActiveSheet();
-    sheet.appendRow([
-      new Date().toISOString(),
-      e.parameter.page,
-      e.parameter.rating,
-      e.parameter.feedback,
-      e.parameter.email || ""
-    ]);
-    return ContentService
-      .createTextResponse(JSON.stringify({ status: "success" }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-*/
-
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 
-const FEEDBACK_URL = "https://script.google.com/macros/s/AKfycbwIvyoNGg-03ntsCOE7W2aP27P9_gvx_8eOAyz6ZXTM7YL6IbTACxVy7EEieiVqaEzB/exec";
+const DEFAULT_API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_HUNTR_API_BASE_URL?.replace(/\/$/, "") ?? DEFAULT_API_BASE_URL;
 
 function isLikelyValidEmail(value: string): boolean {
   if (!value.trim()) {
@@ -125,20 +107,21 @@ export default function FeedbackWidget() {
     try {
       const page = typeof window !== "undefined" ? window.location.pathname : pathname;
 
-      // Google Apps Script requires no-cors with form data
-      const formData = new FormData();
-      formData.append("page", page);
-      formData.append("rating", String(rating));
-      formData.append("feedback", feedback);
-      formData.append("email", email);
-
-      await fetch(FEEDBACK_URL, {
+      const response = await fetch(`${API_BASE_URL}/feedback`, {
         method: "POST",
-        mode: "no-cors",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          page,
+          rating,
+          feedback,
+          email,
+        }),
       });
 
-      // no-cors always returns opaque response so we can't check response.ok
+      if (!response.ok) {
+        throw new Error("Failed");
+      }
+
       setIsSuccess(true);
     } catch {
       setErrorMessage("Something went wrong. Please try again.");
