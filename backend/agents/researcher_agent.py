@@ -60,6 +60,17 @@ class ResearcherAgent:
         "private",
         "pvt",
     }
+    _INVALID_DECISION_MAKER_NAME_TERMS = {
+        "institute",
+        "university",
+        "college",
+        "department",
+        "foundation",
+        "association",
+        "committee",
+        "school",
+        "academy",
+    }
     _TECH_KEYWORDS = {
         "python": "Python",
         "django": "Django",
@@ -131,6 +142,9 @@ class ResearcherAgent:
         tech_stack = self._infer_tech_stack(website_results + activity_results)
         pain_point = self._infer_pain_point(lead=lead, research_results=website_results + activity_results)
         decision_maker = decision_maker_name or "Founder/CEO (name unknown)"
+        if self._is_invalid_decision_maker_name(decision_maker):
+            decision_maker = "Founder/CEO (name unknown)"
+            linkedin_url = ""
         email_hint, email_hint_confidence, email_search_results = self._infer_email_hint(
             company_name=company_name,
             decision_maker_name=decision_maker_name,
@@ -317,6 +331,12 @@ class ResearcherAgent:
             "chief technology officer": "CTO",
         }
         return role_map.get(raw_role, match.group(1).strip())
+
+    def _is_invalid_decision_maker_name(self, decision_maker: str) -> bool:
+        normalized = decision_maker.lower().strip()
+        if not normalized:
+            return False
+        return any(term in normalized for term in self._INVALID_DECISION_MAKER_NAME_TERMS)
 
     def _extract_email(self, text: str) -> str:
         match = self._EMAIL_PATTERN.search(text)

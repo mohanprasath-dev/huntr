@@ -14,40 +14,52 @@ class ScorerAgent:
     name = "Lead Scorer"
     goal = "Score each enriched lead 1-100 based on budget signal, urgency, and fit"
 
+    BASE_SCORE = 40
     MIN_QUALIFIED_SCORE = 60
     MIN_DISCARD_SCORE = 50
 
     _SIZE_RANGE_PATTERN = re.compile(r"(\d{1,4})\s*(?:-|to)\s*(\d{1,4})", re.IGNORECASE)
     _SIZE_SINGLE_PATTERN = re.compile(r"(\d{2,5})\+?")
 
-    _PAIN_KEYWORDS = {
+    _DIRECT_PAIN_KEYWORDS = {
         "manual",
         "bottleneck",
         "struggle",
         "slow",
-        "pipeline",
         "low conversion",
-        "hiring",
         "missed target",
         "urgent",
-        "need help",
         "outsource",
-        "scaling",
     }
-    _TECH_MODERN = {
-        "python",
-        "node.js",
-        "fastapi",
-        "django",
-        "react",
-        "next.js",
-        "aws",
-        "gcp",
-        "azure",
-        "kubernetes",
-        "docker",
-        "postgresql",
-        "snowflake",
+    _RELATED_PAIN_KEYWORDS = {
+        "pipeline",
+        "hiring",
+        "scaling",
+        "automation",
+        "inefficient",
+        "delays",
+        "drop-off",
+        "backlog",
+    }
+    _WEAK_PAIN_KEYWORDS = {
+        "challenge",
+        "help",
+        "improve",
+        "support",
+        "optimize",
+        "growth",
+    }
+    _NON_TARGET_COMPANY_DOMAINS = {
+        "ycombinator.com",
+        "glassdoor.com",
+        "linkedin.com",
+        "indeed.com",
+        "naukri.com",
+        "angel.co",
+        "crunchbase.com",
+        "techcrunch.com",
+        "forbes.com",
+        "inc.com",
     }
     _INDIA_LOCATION_KEYWORDS = {
         "india",
@@ -81,8 +93,12 @@ class ScorerAgent:
         "towardsdatascience.com",
         "dev.to",
         "youtube.com",
+        "ycombinator.com",
+        "glassdoor.com",
+        "linkedin.com",
+        "indeed.com",
     }
-    _NON_COMPANY_WEBSITE_DOMAINS = _KNOWN_CONTENT_DOMAINS | {
+    _NON_COMPANY_WEBSITE_DOMAINS = _KNOWN_CONTENT_DOMAINS | _NON_TARGET_COMPANY_DOMAINS | {
         "linkedin.com",
         "facebook.com",
         "instagram.com",
@@ -109,63 +125,63 @@ class ScorerAgent:
         self._website_status_cache: dict[str, bool] = {}
 
     def score(self, lead: dict[str, Any]) -> dict[str, Any]:
+        blocklisted, blocked_domain = self._is_non_target_blocklisted(lead)
+        if blocklisted:
+            scored = dict(lead)
+            scored["score"] = 0
+            scored["tier"] = "D"
+            scored["qualified"] = False
+            scored["discarded"] = True
+            scored["reasoning"] = (
+                f"Discarded as non-target lead (blocklisted domain match: {blocked_domain})"
+            )
+            scored["score_breakdown"] = {
+                "base_score": self.BASE_SCORE,
+                "adjusted_score": 0,
+                "discard_reason": f"blocklisted domain {blocked_domain}",
+            }
+            return scored
+
         company_points, company_note = self._score_company_size(str(lead.get("size", "")))
-        pain_points, pain_note = self._score_pain_signal(
-            str(lead.get("pain_point") or lead.get("pain_signal") or "")
-        )
-        tech_points, tech_note = self._score_tech_maturity(lead.get("tech_stack"))
-        reach_points, reach_note = self._score_decision_maker_reachability(
-            decision_maker=str(lead.get("decision_maker", "")),
-            email_hint=str(lead.get("email_hint") or lead.get("contact_hint") or ""),
-        )
-
-        base_total = company_points + pain_points + tech_points + reach_points
-
-        adjustment_points = 0
-        adjustment_notes: list[str] = []
-
-        india_bonus, india_note = self._score_india_signal(lead)
-        if india_bonus:
-            adjustment_points += india_bonus
-            adjustment_notes.append(india_note)
-
-        startup_bonus, startup_note = self._score_startup_recency(lead)
-        if startup_bonus:
-            adjustment_points += startup_bonus
-            adjustment_notes.append(startup_note)
-
-        linkedin_bonus, linkedin_note = self._score_linkedin_signal(lead)
-        if linkedin_bonus:
-            adjustment_points += linkedin_bonus
-            adjustment_notes.append(linkedin_note)
-
-        website_bonus, website_note = self._score_website_signal(lead)
-        if website_bonus:
-            adjustment_points += website_bonus
-            adjustment_notes.append(website_note)
-
+        pain_points, pain_note = self._score_pain_signal(lead)
+        decision_maker_points, decision_maker_note = self._score_decision_maker_name(lead)
+        linkedin_points, linkedin_note = self._score_linkedin_signal(lead)
+        email_points, email_note = self._score_email_hint(lead)
+        india_points, india_note = self._score_india_signal(lead)
+        startup_points, startup_note = self._score_startup_recency(lead)
+        website_points, website_note = self._score_website_signal(lead)
         blog_penalty, blog_note = self._score_blog_penalty(lead)
-        if blog_penalty:
-            adjustment_points += blog_penalty
-            adjustment_notes.append(blog_note)
-
         content_penalty, content_note = self._score_content_domain_penalty(lead)
-        if content_penalty:
-            adjustment_points += content_penalty
-            adjustment_notes.append(content_note)
 
-        adjusted_total = max(0, min(100, base_total + adjustment_points))
+        score_delta = (
+            company_points
+            + pain_points
+            + decision_maker_points
+            + linkedin_points
+            + email_points
+            + india_points
+            + startup_points
+            + website_points
+            + blog_penalty
+            + content_penalty
+        )
+
+        adjusted_total = max(0, min(100, self.BASE_SCORE + score_delta))
         tier = self._tier_for_score(adjusted_total)
         discarded = adjusted_total < self.MIN_DISCARD_SCORE
         reasoning = (
-            f"Company size {company_points}/20 ({company_note}); "
-            f"Pain signal {pain_points}/30 ({pain_note}); "
-            f"Tech maturity {tech_points}/25 ({tech_note}); "
-            f"Decision-maker reachability {reach_points}/25 ({reach_note}); "
-            f"India adjustments {adjustment_points:+d}"
+            f"Base {self.BASE_SCORE}; "
+            f"Company size {company_points:+d} ({company_note}); "
+            f"Pain signal {pain_points:+d} ({pain_note}); "
+            f"Decision maker {decision_maker_points:+d} ({decision_maker_note}); "
+            f"LinkedIn {linkedin_points:+d} ({linkedin_note}); "
+            f"Email hint {email_points:+d} ({email_note}); "
+            f"India signal {india_points:+d} ({india_note or 'none'}); "
+            f"Startup signal {startup_points:+d} ({startup_note or 'none'}); "
+            f"Website signal {website_points:+d} ({website_note or 'none'}); "
+            f"Blog/content penalty {blog_penalty:+d} ({blog_note or 'none'}); "
+            f"Known content-site penalty {content_penalty:+d} ({content_note or 'none'})"
         )
-        if adjustment_notes:
-            reasoning += f" ({'; '.join(adjustment_notes)})"
         if discarded:
             reasoning += "; discarded after adjustments (<50)"
 
@@ -176,12 +192,18 @@ class ScorerAgent:
         scored["discarded"] = discarded
         scored["reasoning"] = reasoning
         scored["score_breakdown"] = {
+            "base_score": self.BASE_SCORE,
             "company_size": company_points,
             "pain_signal_strength": pain_points,
-            "tech_maturity": tech_points,
-            "decision_maker_reachability": reach_points,
-            "india_adjustments": adjustment_points,
-            "base_score": base_total,
+            "decision_maker_name": decision_maker_points,
+            "decision_maker_linkedin": linkedin_points,
+            "email_hint": email_points,
+            "india_signal": india_points,
+            "startup_signal": startup_points,
+            "website_signal": website_points,
+            "blog_penalty": blog_penalty,
+            "content_penalty": content_penalty,
+            "net_adjustments": score_delta,
             "adjusted_score": int(adjusted_total),
         }
         return scored
@@ -212,83 +234,59 @@ class ScorerAgent:
     def _score_company_size(self, size: str) -> tuple[int, str]:
         normalized_size = size.lower().strip()
         if not normalized_size or normalized_size == "unknown":
-            return 8, "size unknown; neutral assumption"
+            return 0, "size unknown"
 
         headcount = self._parse_headcount(normalized_size)
         if headcount is None:
-            return 8, "size present but unstructured"
+            return 0, "size present but unstructured"
 
-        if 20 <= headcount <= 500:
-            return 20, "ideal B2B services buying band"
-        if 10 <= headcount <= 1000:
-            return 16, "reasonable budget potential"
-        if 5 <= headcount <= 2000:
-            return 12, "possible fit but weaker buying signal"
-        return 6, "outside ideal size window"
+        is_plus_range = "+" in normalized_size
+        if 1 <= headcount <= 10:
+            return 5, "1-10 employees"
+        if 11 <= headcount <= 50:
+            return 15, "11-50 employees"
+        if 51 <= headcount <= 200 and not (is_plus_range and headcount >= 200):
+            return 20, "51-200 employees"
+        if headcount >= 200:
+            return 10, "200+ employees"
+        return 0, "size outside defined bands"
 
-    def _score_pain_signal(self, pain_text: str) -> tuple[int, str]:
-        text = pain_text.lower().strip()
-        if not text:
-            return 6, "no explicit pain signal"
+    def _score_pain_signal(self, lead: dict[str, Any]) -> tuple[int, str]:
+        pain_text = str(lead.get("pain_point") or lead.get("pain_signal") or "")
+        snippet_text = f"{pain_text} {self._combined_lead_text(lead)}".lower().strip()
+        if not snippet_text:
+            return 0, "no explicit pain signal"
 
-        matched = [keyword for keyword in self._PAIN_KEYWORDS if keyword in text]
-        if len(matched) >= 4:
-            return 30, "multiple strong urgency indicators"
-        if len(matched) == 3:
-            return 26, "strong pain indicators"
-        if len(matched) == 2:
-            return 22, "moderate pain indicators"
-        if len(matched) == 1:
-            return 17, "single pain indicator"
-        return 12, "generic challenge language"
+        if any(keyword in snippet_text for keyword in self._DIRECT_PAIN_KEYWORDS):
+            return 30, "direct pain keyword match"
+        if any(keyword in snippet_text for keyword in self._RELATED_PAIN_KEYWORDS):
+            return 15, "related pain keyword match"
+        if any(keyword in snippet_text for keyword in self._WEAK_PAIN_KEYWORDS):
+            return 5, "weak/indirect pain match"
 
-    def _score_tech_maturity(self, tech_stack: Any) -> tuple[int, str]:
-        stack = self._normalize_stack(tech_stack)
-        if not stack:
-            return 8, "tech stack unknown"
+        return 0, "no qualifying pain keyword match"
 
-        modern_matches = [item for item in stack if item in self._TECH_MODERN]
-        if len(modern_matches) >= 5:
-            return 25, "modern stack with high implementation readiness"
-        if len(modern_matches) >= 3:
-            return 21, "solid stack maturity"
-        if len(modern_matches) >= 1:
-            return 16, "partial modern stack"
-        return 12, "limited technical maturity evidence"
+    def _score_decision_maker_name(self, lead: dict[str, Any]) -> tuple[int, str]:
+        decision_maker = str(lead.get("decision_maker") or "").strip().lower()
+        if not decision_maker or "unknown" in decision_maker:
+            return 0, "decision maker unknown"
+        return 15, "named decision maker found"
 
-    def _score_decision_maker_reachability(
-        self,
-        decision_maker: str,
-        email_hint: str,
-    ) -> tuple[int, str]:
-        dm = decision_maker.lower().strip()
-        email = email_hint.lower().strip()
+    def _score_email_hint(self, lead: dict[str, Any]) -> tuple[int, str]:
+        email_hint = str(lead.get("email_hint") or lead.get("contact_hint") or "").strip().lower()
+        email_confidence = str(lead.get("email_hint_confidence") or "").strip().lower()
 
-        points = 0
-        notes: list[str] = []
+        if not email_hint or email_hint == "unknown":
+            return 0, "no email hint"
 
-        if dm and dm != "unknown":
-            points += 12
-            notes.append("named decision maker found")
-            if any(title in dm for title in ("ceo", "founder", "cto", "vp", "head")):
-                points += 5
-                notes.append("senior role identified")
+        if email_confidence == "found":
+            return 10, "email hint found"
+        if email_confidence == "guessed":
+            return 5, "email hint guessed"
+        if "@" in email_hint:
+            return 10, "email hint found"
 
-        if "@" in email:
-            points += 8
-            notes.append("direct email found")
-        elif "likely pattern" in email:
-            points += 5
-            notes.append("email pattern inferred")
-
-        if "linkedin" in dm:
-            points += 3
-            notes.append("linkedin route available")
-
-        capped_points = min(points, 25)
-        if not notes:
-            return 7, "limited contactability evidence"
-        return capped_points, ", ".join(notes)
+        return 0, "no email hint"
 
     def _parse_headcount(self, size: str) -> int | None:
         range_match = self._SIZE_RANGE_PATTERN.search(size)
@@ -302,16 +300,6 @@ class ScorerAgent:
             return int(single_match.group(1))
 
         return None
-
-    def _normalize_stack(self, tech_stack: Any) -> set[str]:
-        if isinstance(tech_stack, str):
-            values = [tech_stack]
-        elif isinstance(tech_stack, list):
-            values = [str(item) for item in tech_stack]
-        else:
-            values = []
-
-        return {value.lower().strip() for value in values if value and value.lower() != "unknown"}
 
     def _tier_for_score(self, score: int) -> str:
         if score >= 80:
@@ -350,11 +338,7 @@ class ScorerAgent:
     def _score_linkedin_signal(self, lead: dict[str, Any]) -> tuple[int, str]:
         linkedin_url = str(lead.get("linkedin_url") or "").strip().lower()
         if "linkedin.com/in/" in linkedin_url:
-            return 5, "decision maker LinkedIn profile found"
-
-        decision_maker = str(lead.get("decision_maker") or "").strip().lower()
-        if "linkedin" in decision_maker:
-            return 5, "decision maker LinkedIn route found"
+            return 10, "decision maker LinkedIn profile found"
 
         return 0, ""
 
@@ -384,15 +368,29 @@ class ScorerAgent:
         is_blog_path = bool(url and self._BLOG_PATH_PATTERN.search(url))
 
         if is_listicle_title or has_content_words or is_blog_path:
-            return -20, "blog/article/listicle signal"
+            return -25, "blog/article/listicle signal"
 
         return 0, ""
 
     def _score_content_domain_penalty(self, lead: dict[str, Any]) -> tuple[int, str]:
         domain = self._extract_domain(lead)
         if any(domain.endswith(content_domain) for content_domain in self._KNOWN_CONTENT_DOMAINS):
-            return -20, "known content-site domain"
+            return -30, "known content-site domain"
         return 0, ""
+
+    def _is_non_target_blocklisted(self, lead: dict[str, Any]) -> tuple[bool, str]:
+        domain = self._extract_domain(lead)
+        company_name = str(lead.get("company_name") or lead.get("company") or "").strip().lower()
+        company_url = str(lead.get("url") or lead.get("website") or "").strip().lower()
+        searchable_text = f"{company_name} {company_url}".strip()
+
+        for blocked_domain in self._NON_TARGET_COMPANY_DOMAINS:
+            if domain.endswith(blocked_domain):
+                return True, blocked_domain
+            if blocked_domain in searchable_text:
+                return True, blocked_domain
+
+        return False, ""
 
     def _extract_domain(self, lead: dict[str, Any]) -> str:
         domain = str(lead.get("domain") or "").strip().lower()
