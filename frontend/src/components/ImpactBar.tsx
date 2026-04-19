@@ -68,32 +68,32 @@ export default function ImpactBar({ impact }: ImpactBarProps) {
   const manualCostInr = useAnimatedCounter(impact.manual_cost_inr, true);
 
   return (
-    <section className="w-full rounded-2xl border border-white/10 border-l-4 border-l-blue-400 bg-slate-950/75 p-4 shadow-[0_18px_48px_rgba(0,0,0,0.45)] md:p-5">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 xl:gap-4">
+    <section className="w-full rounded-2xl border border-white/10 border-l-4 border-l-blue-400 bg-slate-950/75 p-3 shadow-[0_18px_48px_rgba(0,0,0,0.45)] sm:p-4 md:p-5">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4 xl:gap-4">
         <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-          <p className="text-2xl font-bold tracking-tight text-white">
+          <p className="text-lg font-bold tracking-tight text-white sm:text-2xl">
             ⏱ {formatTimeSaved(timeSavedMinutes)}
           </p>
-          <p className="mt-1 text-sm text-slate-300">saved</p>
+          <p className="mt-1 text-xs text-slate-300 sm:text-sm">saved</p>
         </div>
 
         <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-          <p className="text-2xl font-bold tracking-tight text-white">🎯 {leadsFound}</p>
-          <p className="mt-1 text-sm text-slate-300">leads found</p>
+          <p className="text-lg font-bold tracking-tight text-white sm:text-2xl">🎯 {leadsFound}</p>
+          <p className="mt-1 text-xs text-slate-300 sm:text-sm">leads found</p>
         </div>
 
         <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-          <p className="text-2xl font-bold tracking-tight text-white">✉️ {emailsPersonalized}</p>
-          <p className="mt-1 text-sm text-slate-300">emails personalized</p>
+          <p className="text-lg font-bold tracking-tight text-white sm:text-2xl">✉️ {emailsPersonalized}</p>
+          <p className="mt-1 text-xs text-slate-300 sm:text-sm">emails personalized</p>
         </div>
 
         <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-          <p className="text-2xl font-bold tracking-tight text-white">💰 ₹{formatInr(manualCostInr)}</p>
-          <p className="mt-1 text-sm text-slate-300">manual cost replaced</p>
+          <p className="text-lg font-bold tracking-tight text-white sm:text-2xl">💰 ₹{formatInr(manualCostInr)}</p>
+          <p className="mt-1 text-xs text-slate-300 sm:text-sm">manual cost replaced</p>
         </div>
       </div>
 
-      <p className="mt-4 text-sm text-blue-100/90">
+      <p className="mt-4 text-xs text-blue-100/90 sm:text-sm">
         Pipeline completed in {impact.pipeline_duration_seconds} seconds · Powered by 5 AI agents
       </p>
     </section>

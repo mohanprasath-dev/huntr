@@ -174,11 +174,11 @@ export default function CampaignForm() {
         <p className="text-sm text-muted">
           HuntR will activate 5 autonomous agents and generate fully drafted outreach.
         </p>
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
           <button
             type="submit"
             disabled={!canSubmit || isBusy}
-            className="rounded-lg border border-accent/60 bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.1)_inset,0_12px_24px_rgba(0,102,255,0.25)] transition hover:bg-[#2f7dff] disabled:cursor-not-allowed disabled:opacity-55"
+            className="w-full rounded-lg border border-accent/60 bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.1)_inset,0_12px_24px_rgba(0,102,255,0.25)] transition hover:bg-[#2f7dff] disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto"
           >
             {isSubmitting ? "Launching..." : "Start Hunting"}
           </button>
@@ -186,7 +186,7 @@ export default function CampaignForm() {
             type="button"
             onClick={handleRunLiveDemo}
             disabled={isBusy}
-            className="rounded-lg border border-[#2db5ff] bg-transparent px-4 py-2 text-xs font-semibold tracking-[0.08em] text-white transition hover:border-[#78d2ff] hover:bg-[#0a1f3c] disabled:cursor-not-allowed disabled:opacity-55"
+            className="w-full rounded-lg border border-[#2db5ff] bg-transparent px-4 py-2 text-xs font-semibold tracking-[0.08em] text-white transition hover:border-[#78d2ff] hover:bg-[#0a1f3c] disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto"
           >
             {isDemoSubmitting ? "Starting Demo..." : "▶ Run Live Demo"}
           </button>

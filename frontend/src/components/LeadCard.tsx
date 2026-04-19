@@ -406,12 +406,14 @@ export default function LeadCard({
       }`}
       style={{ animationDelay: `${cardDelayMs}ms` }}
     >
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <header className="flex pr-20 sm:pr-0">
+        <div className="min-w-0">
           <h3 className="text-lg font-semibold text-white">{lead.company}</h3>
           <p className="mt-1 text-sm text-muted">Size: {companySize}</p>
         </div>
-        <div className={`flex items-center gap-3 rounded-full border px-3 py-1 ${scoreTone}`}>
+        <div
+          className={`absolute right-4 top-4 flex items-center gap-3 rounded-full border px-3 py-1 sm:static sm:ml-auto ${scoreTone}`}
+        >
           <div className="relative h-12 w-12">
             <svg className="h-12 w-12 -rotate-90" viewBox="0 0 48 48" aria-hidden="true">
               <circle cx="24" cy="24" r={scoreRingRadius} fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth="4" />
@@ -552,26 +554,28 @@ export default function LeadCard({
             />
           </label>
 
-          <button
-            type="button"
-            onClick={handleSend}
-            disabled={sendState === "sending" || sendState === "sent" || !emailReady}
-            className="h-11 rounded-lg border border-accent/60 bg-accent px-4 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.08)_inset] transition hover:bg-[#2f7dff] disabled:cursor-not-allowed disabled:opacity-55"
-          >
-            {sendState === "sending"
-              ? "Sending..."
-              : sendState === "sent"
-                ? "Sent"
-                : "Approve & Send Email"}
-          </button>
+          <div className="flex w-full flex-col gap-2 md:w-auto">
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={sendState === "sending" || sendState === "sent" || !emailReady}
+              className="h-11 w-full rounded-lg border border-accent/60 bg-accent px-4 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.08)_inset] transition hover:bg-[#2f7dff] disabled:cursor-not-allowed disabled:opacity-55 md:w-auto"
+            >
+              {sendState === "sending"
+                ? "Sending..."
+                : sendState === "sent"
+                  ? "Sent"
+                  : "Approve & Send Email"}
+            </button>
 
-          <button
-            type="button"
-            onClick={handleCopyLinkedin}
-            className="h-11 rounded-lg border border-white/20 bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15"
-          >
-            Copy LinkedIn Message
-          </button>
+            <button
+              type="button"
+              onClick={handleCopyLinkedin}
+              className="h-11 w-full rounded-lg border border-white/20 bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15 md:w-auto"
+            >
+              Copy LinkedIn Message
+            </button>
+          </div>
         </div>
 
         {sendMessage ? (

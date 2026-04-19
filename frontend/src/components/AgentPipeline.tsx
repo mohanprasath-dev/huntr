@@ -376,8 +376,8 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
         </div>
       ) : null}
 
-      <div className="mt-5 overflow-x-auto pb-1">
-        <div className="flex min-w-max items-stretch gap-2">
+      <div className="mt-5 pb-1">
+        <div className="flex min-w-0 flex-col items-stretch gap-2 sm:min-w-max sm:flex-row sm:overflow-x-auto">
           {PIPELINE_STAGES.map((stage, index) => {
             const stageData = stageSnapshots[stage.id];
             const hasEvents = stageData.eventCount > 0;
@@ -393,7 +393,9 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
 
             return (
               <Fragment key={stage.id}>
-                <article className={`relative w-55 rounded-xl border p-4 transition-all duration-300 ${stageTone(phase)}`}>
+                <article
+                  className={`relative w-full rounded-xl border p-4 transition-all duration-300 sm:w-55 ${stageTone(phase)}`}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <p className="text-base font-semibold text-white">
                       <span className="mr-2">{stage.emoji}</span>
@@ -422,7 +424,10 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
                 </article>
 
                 {index < PIPELINE_STAGES.length - 1 ? (
-                  <div className="flex items-center px-1 text-xl text-accent/65">→</div>
+                  <div className="flex items-center justify-center py-1 text-xl text-accent/65 sm:px-1 sm:py-0">
+                    <span className="sm:hidden">↓</span>
+                    <span className="hidden sm:inline">→</span>
+                  </div>
                 ) : null}
               </Fragment>
             );
