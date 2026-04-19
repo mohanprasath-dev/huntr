@@ -69,7 +69,7 @@ export default function ImpactBar({ impact }: ImpactBarProps) {
 
   return (
     <section className="w-full rounded-2xl border border-[#e5e7eb] border-l-4 border-l-[#0066ff] bg-white p-3 shadow-[0_1px_3px_rgba(0,0,0,0.08)] sm:p-4 md:p-5">
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4 xl:gap-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4 lg:gap-4">
         <div className="rounded-xl border border-[#e5e7eb] bg-[#f9fafb] px-4 py-3">
           <p className="text-lg font-bold tracking-tight text-[#111827] sm:text-2xl">
             ⏱ {formatTimeSaved(timeSavedMinutes)}
@@ -93,7 +93,7 @@ export default function ImpactBar({ impact }: ImpactBarProps) {
         </div>
       </div>
 
-      <p className="mt-4 text-xs text-[#6b7280] sm:text-sm">
+      <p className="mt-4 text-sm text-[#6b7280]">
         Pipeline completed in {impact.pipeline_duration_seconds} seconds · Powered by 5 AI agents
       </p>
     </section>

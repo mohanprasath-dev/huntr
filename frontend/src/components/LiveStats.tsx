@@ -103,7 +103,7 @@ export default function LiveStats() {
   }, []);
 
   return (
-    <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <article className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-4">
         <p className="text-2xl font-bold tracking-tight text-[#111827]">
           🎯 {displayedStats.total_leads_all_time.toLocaleString()} leads found

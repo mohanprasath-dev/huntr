@@ -412,37 +412,39 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
 
   return (
     <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <header className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
           <h2 className="text-lg font-semibold text-[#111827]">Live Agent Pipeline</h2>
-          <p className="mt-1 text-sm text-[#6b7280]">
+          <p className="mt-1 break-all text-sm text-[#6b7280]">
             Real-time orchestration stream for job {jobId}
           </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {showStopButton ? (
-            <button
-              type="button"
-              onClick={handleStop}
-              disabled={isStopping}
-              className="rounded-md border border-[#dc2626] px-3 py-1.5 text-sm font-semibold text-[#dc2626] transition hover:bg-[#fef2f2] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isStopping ? "Stopping..." : "⬛ Stop"}
-            </button>
-          ) : null}
-
-          <div className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-2 text-right shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
-              Total Leads Found
-            </p>
-            <p className="font-mono text-2xl font-semibold text-[#0066ff]">{totalLeadsFound}</p>
           </div>
-          <span
-            className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${streamStateTone(sseStatus)}`}
-          >
-            {stateLabel(sseStatus)}
-          </span>
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            <div className="hidden rounded-xl border border-[#e5e7eb] bg-white px-4 py-2 text-right shadow-[0_1px_3px_rgba(0,0,0,0.08)] sm:block">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
+                Total Leads Found
+              </p>
+              <p className="font-mono text-2xl font-semibold text-[#0066ff]">{totalLeadsFound}</p>
+            </div>
+            <span
+              className={`inline-flex min-h-11 items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${streamStateTone(sseStatus)}`}
+            >
+              {stateLabel(sseStatus)}
+            </span>
+          </div>
         </div>
+
+        {showStopButton ? (
+          <button
+            type="button"
+            onClick={handleStop}
+            disabled={isStopping}
+            className="min-h-11 w-full rounded-md border border-[#dc2626] px-3 py-1.5 text-sm font-semibold text-[#dc2626] transition hover:bg-[#fef2f2] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+          >
+            {isStopping ? "Stopping..." : "⬛ Stop"}
+          </button>
+        ) : null}
       </header>
 
       {stopError ? (
@@ -472,7 +474,7 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
       ) : null}
 
       <div className="mt-5 pb-1">
-        <div className="flex min-w-0 flex-col items-stretch gap-2 sm:min-w-max sm:flex-row sm:overflow-x-auto">
+        <div className="flex min-w-max items-stretch gap-2 overflow-x-auto pb-1">
           {PIPELINE_STAGES.map((stage, index) => {
             const stageData = stageSnapshots[stage.id];
             const hasEvents = stageData.eventCount > 0;
@@ -498,7 +500,7 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
             return (
               <Fragment key={stage.id}>
                 <article
-                  className={`relative w-full rounded-xl border p-4 transition-all duration-300 sm:w-55 ${stageTone(phase)}`}
+                  className={`relative w-56 shrink-0 rounded-xl border p-4 transition-all duration-300 sm:w-60 ${stageTone(phase)}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <p
@@ -554,9 +556,8 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
                 </article>
 
                 {index < PIPELINE_STAGES.length - 1 ? (
-                  <div className="flex items-center justify-center py-1 text-xl text-[#0066ff] sm:px-1 sm:py-0">
-                    <span className="sm:hidden">↓</span>
-                    <span className="hidden sm:inline">→</span>
+                  <div className="flex items-center justify-center px-1 py-0 text-xl text-[#0066ff]">
+                    <span>→</span>
                   </div>
                 ) : null}
               </Fragment>
@@ -569,7 +570,7 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">Live Agent Log</p>
         <div
           ref={logContainerRef}
-          className="mt-3 h-64 overflow-y-auto rounded-lg border border-[#374151] bg-[#111827] p-3 font-mono text-xs"
+          className="mt-3 h-[200px] overflow-y-auto rounded-lg border border-[#374151] bg-[#111827] p-3 font-mono text-xs sm:h-64"
         >
           {terminalEvents.length > 0 ? (
             terminalEvents.map((event, index) => (

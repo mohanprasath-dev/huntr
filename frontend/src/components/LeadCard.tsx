@@ -475,13 +475,13 @@ export default function LeadCard({
       }`}
       style={{ animationDelay: `${cardDelayMs}ms` }}
     >
-      <header className="flex pr-20 sm:pr-0">
+      <header className="flex items-start pr-[7.75rem] sm:pr-0">
         <div className="min-w-0">
           <p className="text-[0.65rem] font-semibold uppercase tracking-[0.15em] text-[#9ca3af]">
             {companyDisplay.label}
           </p>
           <h3
-            className={`mt-1 text-lg ${
+            className={`mt-1 break-words text-base sm:text-lg ${
               companyDisplay.isSourceLike
                 ? "font-medium italic text-[#6b7280]"
                 : "font-semibold text-[#111827]"
@@ -493,10 +493,10 @@ export default function LeadCard({
           <p className="mt-1 text-sm text-[#6b7280]">Size: {companySize}</p>
         </div>
         <div
-          className={`absolute right-4 top-4 flex items-center gap-3 rounded-full border px-3 py-1 sm:static sm:ml-auto ${scoreTone}`}
+          className={`absolute right-3 top-3 flex items-center gap-2 rounded-full border px-2 py-1 sm:static sm:ml-auto sm:gap-3 sm:px-3 ${scoreTone}`}
         >
-          <div className="relative h-12 w-12">
-            <svg className="h-12 w-12 -rotate-90" viewBox="0 0 48 48" aria-hidden="true">
+          <div className="relative h-10 w-10 sm:h-12 sm:w-12">
+            <svg className="h-10 w-10 -rotate-90 sm:h-12 sm:w-12" viewBox="0 0 48 48" aria-hidden="true">
               <circle cx="24" cy="24" r={scoreRingRadius} fill="none" stroke="#d1d5db" strokeWidth="4" />
               <circle
                 cx="24"
@@ -513,11 +513,11 @@ export default function LeadCard({
                 }}
               />
             </svg>
-            <span className="absolute inset-0 grid place-items-center text-sm font-bold text-current">
+            <span className="absolute inset-0 grid place-items-center text-xs font-bold text-current sm:text-sm">
               {animatedScore}
             </span>
           </div>
-          <div className="leading-tight">
+          <div className="hidden leading-tight sm:block">
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.15em]">Score</p>
             <p className="text-xs text-[#6b7280]">Relevance Score</p>
           </div>
@@ -577,7 +577,7 @@ export default function LeadCard({
             <button
               type="button"
               onClick={handleSearchLinkedin}
-              className="mt-4 inline-flex items-center rounded-lg border border-[#0077B5] px-3 py-1.5 text-xs font-semibold text-[#0077B5] transition-colors hover:bg-[#eff6ff] hover:text-[#005f91]"
+              className="mt-4 inline-flex min-h-11 items-center rounded-lg border border-[#0077B5] px-3 py-1.5 text-xs font-semibold text-[#0077B5] transition-colors hover:bg-[#eff6ff] hover:text-[#005f91]"
             >
               🔍 Search on LinkedIn
             </button>
@@ -593,14 +593,14 @@ export default function LeadCard({
         </section>
       </div>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-2">
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <section className="rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs uppercase tracking-[0.2em] text-[#9ca3af]">Email Draft</p>
             <button
               type="button"
               onClick={() => setEmailExpanded((current) => !current)}
-              className="text-xs font-medium text-accent hover:text-[#0052cc]"
+              className="inline-flex min-h-11 items-center text-xs font-medium text-accent hover:text-[#0052cc]"
             >
               {emailExpanded ? "Collapse" : "Expand"}
             </button>
@@ -614,7 +614,7 @@ export default function LeadCard({
                   type="text"
                   value={emailSubject}
                   onChange={(event) => setEmailSubject(event.target.value)}
-                  className="mt-2 w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-[#111827] outline-none transition-colors focus:border-accent"
+                  className="mt-2 h-11 w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-[#111827] outline-none transition-colors focus:border-accent"
                 />
               </label>
               <label className="block">
@@ -640,7 +640,7 @@ export default function LeadCard({
             <button
               type="button"
               onClick={() => setLinkedinExpanded((current) => !current)}
-              className="text-xs font-medium text-accent hover:text-[#0052cc]"
+              className="inline-flex min-h-11 items-center text-xs font-medium text-accent hover:text-[#0052cc]"
             >
               {linkedinExpanded ? "Collapse" : "Expand"}
             </button>
@@ -665,7 +665,7 @@ export default function LeadCard({
         <button
           type="button"
           onClick={() => setShowFollowups((current) => !current)}
-          className="text-xs font-semibold uppercase tracking-[0.16em] text-accent hover:text-[#0052cc]"
+          className="inline-flex min-h-11 items-center text-xs font-semibold uppercase tracking-[0.16em] text-accent hover:text-[#0052cc]"
         >
           {showFollowups ? "Hide Follow-up Timeline" : "Show Follow-up Timeline"}
         </button>
@@ -686,7 +686,7 @@ export default function LeadCard({
               value={recipient}
               onChange={(event) => setRecipient(event.target.value)}
               placeholder={leadEmailHint ? undefined : "Enter decision maker's email"}
-              className="mt-2 w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-[#111827] outline-none transition-colors focus:border-accent"
+              className="mt-2 h-11 w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-[#111827] outline-none transition-colors focus:border-accent"
             />
           </label>
 

@@ -54,5 +54,48 @@ body {
 }
 
 * {
+  box-sizing: border-box;
   scrollbar-color: rgba(107, 114, 128, 0.45) #f3f4f6;
+}
+
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+main,
+section,
+article,
+header,
+footer {
+  min-width: 0;
+}
+
+@media (max-width: 639px) {
+  body {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  button,
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    min-height: 44px;
+  }
+
+  p,
+  h1,
+  h2,
+  h3 {
+    overflow-wrap: anywhere;
+  }
 }

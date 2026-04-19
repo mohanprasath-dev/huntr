@@ -38,10 +38,10 @@ async function parseStopError(response: Response): Promise<string> {
 
 function navLinkClass(isActive: boolean): string {
   if (isActive) {
-    return "text-sm font-semibold text-[#111827]";
+    return "inline-flex min-h-11 items-center text-sm font-semibold text-[#111827]";
   }
 
-  return "text-sm font-medium text-[#374151] transition hover:text-[#111827]";
+  return "inline-flex min-h-11 items-center text-sm font-medium text-[#374151] transition hover:text-[#111827]";
 }
 
 export default function Navbar() {
@@ -119,7 +119,7 @@ export default function Navbar() {
               type="button"
               onClick={handleStopHunt}
               disabled={isStopping}
-              className="rounded-md border border-[#dc2626] px-3 py-1.5 text-sm font-semibold text-[#dc2626] transition hover:bg-[#fef2f2] disabled:cursor-not-allowed disabled:opacity-60"
+              className="min-h-11 rounded-md border border-[#dc2626] px-3 py-1.5 text-sm font-semibold text-[#dc2626] transition hover:bg-[#fef2f2] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isStopping ? "Stopping..." : "⬛ Stop Hunt"}
             </button>
@@ -128,7 +128,7 @@ export default function Navbar() {
 
         <button
           type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-[#e5e7eb] text-[#374151] transition hover:bg-[#f9fafb] md:hidden"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#e5e7eb] text-[#374151] transition hover:bg-[#f9fafb] md:hidden"
           aria-label={isMobileOpen ? "Close navigation menu" : "Open navigation menu"}
           aria-expanded={isMobileOpen}
           aria-controls="mobile-primary-nav"
@@ -173,7 +173,7 @@ export default function Navbar() {
                 type="button"
                 onClick={handleStopHunt}
                 disabled={isStopping}
-                className="w-full rounded-md border border-[#dc2626] px-3 py-2 text-left text-sm font-semibold text-[#dc2626] transition hover:bg-[#fef2f2] disabled:cursor-not-allowed disabled:opacity-60"
+                className="min-h-11 w-full rounded-md border border-[#dc2626] px-3 py-2 text-left text-sm font-semibold text-[#dc2626] transition hover:bg-[#fef2f2] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isStopping ? "Stopping..." : "⬛ Stop Hunt"}
               </button>

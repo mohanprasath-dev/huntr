@@ -314,16 +314,16 @@ export default function HuntDashboard({
   return (
     <div className="min-h-screen bg-[#f9fafb]">
       <div className="mx-auto w-full max-w-screen-2xl px-4 pb-12 pt-8 md:px-8">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <header className="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-accent">Hunt Session</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#111827] md:text-4xl">
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#111827] md:text-4xl">
             Live Leads Dashboard
           </h1>
-          <p className="mt-2 text-sm text-[#6b7280]">Job ID: {jobId}</p>
+          <p className="mt-2 break-all text-sm text-[#6b7280]">Job ID: {jobId}</p>
         </div>
         <span
-          className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${statusTone(statusLabel)}`}
+          className={`inline-flex min-h-11 items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${statusTone(statusLabel)}`}
         >
           {statusLabel}
         </span>
@@ -331,25 +331,25 @@ export default function HuntDashboard({
 
       <section className="mb-6 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-[#374151] shadow-[0_1px_3px_rgba(0,0,0,0.08)] md:px-5">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <p className="font-medium">
+          <p className="break-words font-medium leading-relaxed">
             <span className="font-semibold text-[#111827]">{leadsFoundCount}</span> leads found,
             <span className="ml-1 font-semibold text-[#111827]">{aboveThresholdCount}</span> above threshold,
             <span className="ml-1 font-semibold text-[#111827]">{readyToSendCount}</span> ready to send
           </p>
 
           {canExportCsv ? (
-            <div className="flex items-center justify-end gap-2 md:ml-auto">
+            <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between md:ml-auto md:w-auto">
               <button
                 type="button"
                 onClick={() => {
                   window.open(`${API_BASE_URL}/leads/${jobId}/export/csv`, "_blank");
                 }}
-                className="rounded px-2 py-1 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                className="min-h-11 w-full rounded px-3 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 sm:w-auto"
                 style={{ backgroundColor: "#0066ff" }}
               >
                 ⬇ Export CSV
               </button>
-              <span className="text-xs text-[#6b7280]">
+              <span className="text-xs leading-relaxed text-[#6b7280]">
                 Export all leads with email drafts and follow-up sequences
               </span>
             </div>
@@ -366,7 +366,7 @@ export default function HuntDashboard({
                 type="button"
                 onClick={handleResumeHunt}
                 disabled={isResuming || !resumeConfig}
-                className="rounded-md border border-[#d97706] bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-[#d97706] transition hover:bg-[#fffbeb] disabled:cursor-not-allowed disabled:opacity-60"
+                className="min-h-11 w-full rounded-md border border-[#d97706] bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-[#d97706] transition hover:bg-[#fffbeb] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 {isResuming ? "Resuming..." : "Resume Hunt"}
               </button>
@@ -422,7 +422,7 @@ export default function HuntDashboard({
               <select
                 value={scoreFilter}
                 onChange={(event) => setScoreFilter(event.target.value as ScoreRangeFilter)}
-                className="mt-2 h-10 rounded-lg border border-[#e5e7eb] bg-white px-3 text-sm text-[#111827] outline-none transition-colors focus:border-accent"
+                className="mt-2 h-11 rounded-lg border border-[#e5e7eb] bg-white px-3 text-sm text-[#111827] outline-none transition-colors focus:border-accent"
               >
                 <option value="all">All Scores</option>
                 <option value="90-100">90-100</option>
@@ -437,7 +437,7 @@ export default function HuntDashboard({
               <select
                 value={sourceFilter}
                 onChange={(event) => setSourceFilter(event.target.value as "all" | LeadSource)}
-                className="mt-2 h-10 rounded-lg border border-[#e5e7eb] bg-white px-3 text-sm text-[#111827] outline-none transition-colors focus:border-accent"
+                className="mt-2 h-11 rounded-lg border border-[#e5e7eb] bg-white px-3 text-sm text-[#111827] outline-none transition-colors focus:border-accent"
               >
                 <option value="all">All Sources</option>
                 <option value="LinkedIn">LinkedIn</option>
@@ -453,7 +453,7 @@ export default function HuntDashboard({
                   setScoreFilter("all");
                   setSourceFilter("all");
                 }}
-                className="h-10 rounded-lg border border-[#e5e7eb] bg-white px-3 text-sm font-medium text-[#374151] transition hover:bg-[#f9fafb]"
+                className="h-11 rounded-lg border border-[#e5e7eb] bg-white px-3 text-sm font-medium text-[#374151] transition hover:bg-[#f9fafb]"
               >
                 Reset Filters
               </button>

@@ -442,21 +442,21 @@ export default function CampaignsPage() {
         <button
           type="button"
           onClick={() => setIsCompareOpen(true)}
-          className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 rounded-full bg-[#0066ff] px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,102,255,0.28)] transition hover:bg-[#0052cc]"
+          className="fixed bottom-6 left-1/2 z-40 min-h-11 -translate-x-1/2 rounded-full bg-[#0066ff] px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,102,255,0.28)] transition hover:bg-[#0052cc]"
         >
           Compare 2 Campaigns →
         </button>
       ) : null}
 
       {isCompareOpen && comparison ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#11182766] p-4">
-          <div className="w-full max-w-5xl rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-[0_24px_80px_rgba(17,24,39,0.28)] md:p-6">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#11182766] p-0 sm:items-center sm:p-4">
+          <div className="h-screen w-screen overflow-y-auto rounded-none border-0 bg-white p-4 shadow-none sm:h-auto sm:w-full sm:max-w-5xl sm:rounded-2xl sm:border sm:border-[#e5e7eb] sm:p-5 sm:shadow-[0_24px_80px_rgba(17,24,39,0.28)] md:p-6">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-xl font-semibold text-[#111827] md:text-2xl">Campaign Comparison</h2>
               <button
                 type="button"
                 onClick={() => setIsCompareOpen(false)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#e5e7eb] text-sm font-semibold text-[#6b7280] transition hover:border-[#9ca3af] hover:text-[#374151]"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#e5e7eb] text-sm font-semibold text-[#6b7280] transition hover:border-[#9ca3af] hover:text-[#374151]"
                 aria-label="Close comparison"
               >
                 ✕
