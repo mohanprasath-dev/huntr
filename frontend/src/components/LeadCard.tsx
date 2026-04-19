@@ -114,6 +114,21 @@ function derivePainPoint(lead: Lead): string {
   return sentence.length > 120 ? `${sentence.slice(0, 117)}...` : sentence;
 }
 
+function deriveRecipientEmailHint(lead: Lead): string {
+  const leadWithEmailHint = lead as Lead & {
+    email_hint?: string | null;
+    emailHint?: string | null;
+  };
+
+  const hint = leadWithEmailHint.email_hint ?? leadWithEmailHint.emailHint;
+  if (typeof hint !== "string") {
+    return "";
+  }
+
+  const trimmedHint = hint.trim();
+  return trimmedHint || "";
+}
+
 function deriveLeadSource(lead: Lead): "LinkedIn" | "Reddit" | "Twitter" {
   const explicitSource = String(lead.source || "").toLowerCase();
   if (explicitSource.includes("reddit")) {
@@ -172,7 +187,7 @@ export default function LeadCard({
   alreadySent,
   onSent,
 }: LeadCardProps) {
-  const [recipient, setRecipient] = useState("");
+  const [recipient, setRecipient] = useState(() => deriveRecipientEmailHint(lead));
   const [emailExpanded, setEmailExpanded] = useState(false);
   const [linkedinExpanded, setLinkedinExpanded] = useState(false);
   const [showFollowups, setShowFollowups] = useState(false);
@@ -204,6 +219,7 @@ export default function LeadCard({
   const isPipelineStageActive = sendState === "sending" || trackingState === "polling";
 
   useEffect(() => {
+    setRecipient(deriveRecipientEmailHint(lead));
     setEmailSubject(lead.email_draft?.subject || "");
     setEmailBody(lead.email_draft?.body || "");
     setLinkedinMessage(lead.linkedin_draft || "");
@@ -340,6 +356,7 @@ export default function LeadCard({
   const decisionMaker = useMemo(() => parseDecisionMaker(lead), [lead]);
   const painPoint = useMemo(() => derivePainPoint(lead), [lead]);
   const source = useMemo(() => deriveLeadSource(lead), [lead]);
+  const leadEmailHint = useMemo(() => deriveRecipientEmailHint(lead), [lead]);
   const emailReady = Boolean(emailSubject.trim()) && Boolean(emailBody.trim());
   const openedRelativeTime = useMemo(() => {
     if (!openedAt) {
@@ -438,7 +455,7 @@ export default function LeadCard({
           </div>
           <div className="leading-tight">
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.15em]">Score</p>
-            <p className="text-xs text-white/80">Lead quality</p>
+            <p className="text-xs text-white/80">Relevance Score</p>
           </div>
         </div>
       </header>
@@ -549,7 +566,7 @@ export default function LeadCard({
               type="email"
               value={recipient}
               onChange={(event) => setRecipient(event.target.value)}
-              placeholder="decisionmaker@company.com"
+              placeholder={leadEmailHint ? undefined : "Enter decision maker's email"}
               className="mt-2 w-full rounded-lg border border-white/15 bg-panel-elevated px-3 py-2 text-sm text-white outline-none transition-colors focus:border-accent"
             />
           </label>
