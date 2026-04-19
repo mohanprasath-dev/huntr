@@ -169,6 +169,20 @@ function deriveLeadSource(lead: Lead): "LinkedIn" | "Reddit" | "Twitter" {
   return "LinkedIn";
 }
 
+function deriveLinkedinUrl(lead: Lead): string {
+  const withLinkedin = lead as Lead & {
+    linkedin_url?: string | null;
+    linkedinUrl?: string | null;
+  };
+
+  const raw = withLinkedin.linkedin_url ?? withLinkedin.linkedinUrl;
+  if (typeof raw !== "string") {
+    return "";
+  }
+
+  return raw.trim();
+}
+
 function formatOpenedAgo(openedAtIso: string, nowMs: number): string {
   const openedMs = Date.parse(openedAtIso);
   if (Number.isNaN(openedMs)) {
@@ -375,8 +389,12 @@ export default function LeadCard({
   const decisionMaker = useMemo(() => parseDecisionMaker(lead), [lead]);
   const painPoint = useMemo(() => derivePainPoint(lead), [lead]);
   const source = useMemo(() => deriveLeadSource(lead), [lead]);
+  const linkedinUrl = useMemo(() => deriveLinkedinUrl(lead), [lead]);
   const leadEmailHint = useMemo(() => deriveRecipientEmailHint(lead), [lead]);
+  const decisionMakerRaw = useMemo(() => String(lead.decision_maker || "").trim(), [lead]);
   const emailReady = Boolean(emailSubject.trim()) && Boolean(emailBody.trim());
+  const canSearchLinkedin =
+    !linkedinUrl && decisionMakerRaw !== "Founder/CEO (name unknown)";
   const openedRelativeTime = useMemo(() => {
     if (!openedAt) {
       return "";
@@ -433,6 +451,21 @@ export default function LeadCard({
       setCopyState("error");
       setCopyMessage("Clipboard copy failed. Copy manually from the editor.");
     }
+  }
+
+  function handleSearchLinkedin(): void {
+    const company = String(lead.company || "").trim();
+    const keywords = `${decisionMakerRaw || decisionMaker.name} ${company}`.trim();
+    if (!keywords) {
+      return;
+    }
+
+    const query = encodeURIComponent(keywords);
+    window.open(
+      `https://linkedin.com/search/results/people/?keywords=${query}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
   }
 
   return (
@@ -496,6 +529,61 @@ export default function LeadCard({
           <p className="text-xs uppercase tracking-[0.2em] text-muted">Decision Maker</p>
           <p className="mt-2 text-sm font-semibold text-white">{decisionMaker.name}</p>
           <p className="mt-1 text-sm text-muted">{decisionMaker.title}</p>
+
+          {linkedinUrl ? (
+            <div className="mt-4">
+              <article className="relative rounded-xl border border-[#0077B5] bg-[#081b2b]/80 p-3">
+                <span className="absolute left-3 top-3 inline-grid h-4 w-4 place-items-center rounded-sm bg-[#0077B5] text-[0.6rem] font-bold leading-none text-white">
+                  in
+                </span>
+
+                <div className="flex items-start justify-between gap-3 pl-6">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div className="inline-grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-500/50 text-slate-200">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        className="h-5 w-5"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4 0-7 2-7 4.5a.75.75 0 0 0 1.5 0c0-1.37 2.22-3 5.5-3s5.5 1.63 5.5 3a.75.75 0 0 0 1.5 0C19 16 16 14 12 14Z" />
+                      </svg>
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-white">{decisionMaker.name}</p>
+                      <p className="mt-0.5 truncate text-xs text-slate-300">{decisionMaker.title}</p>
+                      <p className="mt-2 text-xs text-muted">{String(lead.company || "Unknown Company")}</p>
+                    </div>
+                  </div>
+
+                  <a
+                    href={linkedinUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 text-xs font-semibold text-[#66c5ff] transition-colors hover:text-[#8dd8ff]"
+                  >
+                    View Profile →
+                  </a>
+                </div>
+              </article>
+
+              <p className="mt-2 inline-flex rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-emerald-200">
+                ✓ Connect Message Ready
+              </p>
+            </div>
+          ) : canSearchLinkedin ? (
+            <button
+              type="button"
+              onClick={handleSearchLinkedin}
+              className="mt-4 inline-flex items-center rounded-lg border border-[#0077B5] px-3 py-1.5 text-xs font-semibold text-[#66c5ff] transition-colors hover:bg-[#0077B5]/10 hover:text-[#8dd8ff]"
+            >
+              🔍 Search on LinkedIn
+            </button>
+          ) : (
+            <p className="mt-4 text-xs text-muted">LinkedIn profile not found</p>
+          )}
         </section>
 
         <section className="rounded-xl border border-white/10 bg-white/2 p-4">
