@@ -1,9 +1,29 @@
 "use client";
 
+/*
+  APPS SCRIPT CODE (replace existing script with this):
+
+  function doPost(e) {
+    const sheet = SpreadsheetApp
+      .getActiveSpreadsheet()
+      .getActiveSheet();
+    sheet.appendRow([
+      new Date().toISOString(),
+      e.parameter.page,
+      e.parameter.rating,
+      e.parameter.feedback,
+      e.parameter.email || ""
+    ]);
+    return ContentService
+      .createTextResponse(JSON.stringify({ status: "success" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+*/
+
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 
-const FEEDBACK_URL = "PASTE_YOUR_APPS_SCRIPT_URL_HERE";
+const FEEDBACK_URL = "https://script.google.com/macros/s/AKfycbwIvyoNGg-03ntsCOE7W2aP27P9_gvx_8eOAyz6ZXTM7YL6IbTACxVy7EEieiVqaEzB/exec";
 
 function isLikelyValidEmail(value: string): boolean {
   if (!value.trim()) {
@@ -105,23 +125,20 @@ export default function FeedbackWidget() {
     try {
       const page = typeof window !== "undefined" ? window.location.pathname : pathname;
 
-      const response = await fetch(FEEDBACK_URL, {
+      // Google Apps Script requires no-cors with form data
+      const formData = new FormData();
+      formData.append("page", page);
+      formData.append("rating", String(rating));
+      formData.append("feedback", feedback);
+      formData.append("email", email);
+
+      await fetch(FEEDBACK_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          page,
-          rating,
-          feedback: trimmedFeedback,
-          email: trimmedEmail,
-        }),
+        mode: "no-cors",
+        body: formData,
       });
 
-      if (!response.ok) {
-        throw new Error(`Feedback request failed with ${response.status}`);
-      }
-
+      // no-cors always returns opaque response so we can't check response.ok
       setIsSuccess(true);
     } catch {
       setErrorMessage("Something went wrong. Please try again.");
