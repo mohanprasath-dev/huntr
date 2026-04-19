@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
-import { getStreamUrl, stopHunt } from "@/lib/huntr-api";
+import { getJobStatus, getStreamUrl, stopHunt } from "@/lib/huntr-api";
 import type { StreamEvent } from "@/lib/huntr-types";
 
 interface AgentPipelineProps {
@@ -71,6 +71,8 @@ interface StageSnapshot {
 }
 
 const STAGE_IDS = new Set<StageId>(PIPELINE_STAGES.map((stage) => stage.id));
+const MAX_RECONNECT_ATTEMPTS = 3;
+const RECONNECT_DELAYS_MS = [1000, 2000, 4000] as const;
 
 function createInitialStageSnapshot(): Record<StageId, StageSnapshot> {
   return {
@@ -167,7 +169,7 @@ function formatTraceLine(event: StreamEvent): string {
 
 function isTerminalJobStatus(status: string | null | undefined): boolean {
   const normalized = String(status ?? "").toLowerCase();
-  return normalized === "completed" || normalized === "stopped";
+  return normalized === "completed" || normalized === "failed" || normalized === "stopped";
 }
 
 export default function AgentPipeline({ jobId, jobStatus }: AgentPipelineProps) {
@@ -175,6 +177,7 @@ export default function AgentPipeline({ jobId, jobStatus }: AgentPipelineProps) 
   const [streamState, setStreamState] = useState<StreamState>("connecting");
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [sseError, setSseError] = useState(false);
+  const [retryNonce, setRetryNonce] = useState(0);
   const [isStopping, setIsStopping] = useState(false);
   const [stopError, setStopError] = useState("");
   const [isExternallyStopped, setIsExternallyStopped] = useState(false);
@@ -197,6 +200,7 @@ export default function AgentPipeline({ jobId, jobStatus }: AgentPipelineProps) 
     setStreamState("connecting");
     setReconnectAttempts(0);
     setSseError(false);
+    setRetryNonce(0);
     setIsStopping(false);
     setStopError("");
     setIsExternallyStopped(false);
@@ -219,6 +223,12 @@ export default function AgentPipeline({ jobId, jobStatus }: AgentPipelineProps) 
     let reconnectCount = 0;
     let closedByTerminalEvent = false;
     let cancelled = false;
+
+    const closeGracefully = (): void => {
+      setStreamState("closed");
+      setReconnectAttempts(0);
+      setSseError(false);
+    };
 
     const connectSSE = (): void => {
       if (cancelled) {
@@ -283,24 +293,50 @@ export default function AgentPipeline({ jobId, jobStatus }: AgentPipelineProps) 
       eventSource.onerror = () => {
         eventSource.close();
 
-        if (closedByTerminalEvent || parentTerminalStatusRef.current) {
-          setStreamState("closed");
-          setSseError(false);
-          return;
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = undefined;
         }
 
-        reconnectCount += 1;
-        setReconnectAttempts(reconnectCount);
+        const handleConnectionError = async (): Promise<void> => {
+          if (cancelled) {
+            return;
+          }
 
-        if (reconnectCount < 3) {
+          if (closedByTerminalEvent || parentTerminalStatusRef.current) {
+            closeGracefully();
+            return;
+          }
+
+          try {
+            const latestStatus = await getJobStatus(jobId);
+            if (isTerminalJobStatus(latestStatus.status)) {
+              closeGracefully();
+              return;
+            }
+          } catch {
+            // Ignore status check failures and continue reconnect flow.
+          }
+
+          if (reconnectCount >= MAX_RECONNECT_ATTEMPTS) {
+            setSseError(true);
+            setStreamState("error");
+            return;
+          }
+
+          reconnectCount += 1;
+          setReconnectAttempts(reconnectCount);
+          setSseError(false);
+          setStreamState("connecting");
+
+          const delayMs =
+            RECONNECT_DELAYS_MS[Math.min(reconnectCount - 1, RECONNECT_DELAYS_MS.length - 1)];
           reconnectTimer = setTimeout(() => {
             connectSSE();
-          }, 2000);
-          return;
-        }
+          }, delayMs);
+        };
 
-        setSseError(true);
-        setStreamState("error");
+        void handleConnectionError();
       };
     };
 
@@ -313,7 +349,7 @@ export default function AgentPipeline({ jobId, jobStatus }: AgentPipelineProps) 
       }
       source?.close();
     };
-  }, [isParentTerminalStatus, jobId]);
+  }, [isParentTerminalStatus, jobId, retryNonce]);
 
   useEffect(() => {
     const onHuntStopped = (event: Event): void => {
@@ -568,6 +604,17 @@ export default function AgentPipeline({ jobId, jobStatus }: AgentPipelineProps) 
     }
   }
 
+  function handleRetryConnection(): void {
+    if (isParentTerminalStatus) {
+      return;
+    }
+
+    setSseError(false);
+    setReconnectAttempts(0);
+    setStreamState("connecting");
+    setRetryNonce((current) => current + 1);
+  }
+
   const showStopButton =
     (sseStatus === "running" || sseStatus === "connected") && !isTerminalRun && !hasStoppedState;
 
@@ -722,9 +769,16 @@ export default function AgentPipeline({ jobId, jobStatus }: AgentPipelineProps) 
       ) : null}
 
       {sseError ? (
-        <p className="mt-3 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-sm text-[#dc2626]">
-          SSE Error
-        </p>
+        <div className="mt-3 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-sm text-[#dc2626]">
+          <p>SSE Error after 3 reconnect attempts.</p>
+          <button
+            type="button"
+            onClick={handleRetryConnection}
+            className="mt-2 inline-flex min-h-10 items-center rounded-md border border-[#dc2626] bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-[#dc2626] transition hover:bg-[#fee2e2]"
+          >
+            Retry Connection
+          </button>
+        </div>
       ) : null}
 
       {stopError ? (

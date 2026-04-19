@@ -827,43 +827,59 @@ def get_campaign_by_job_id(job_id: str) -> dict[str, Any]:
 
 @app.get("/stream/{job_id}")
 async def stream_job(job_id: str) -> StreamingResponse:
-    _job_or_404(job_id)
-
     async def _event_generator() -> Any:
-        cursor = 0
+        last_index = 0
+        last_ping = time.time()
+
         while True:
+            if time.time() - last_ping > 15:
+                yield ": keepalive\n\n"
+                last_ping = time.time()
+
             with JOBS_LOCK:
                 job = JOBS.get(job_id)
                 if job is None:
-                    break
-                events = list(job.get("events", []))
-                status = str(job.get("status", "unknown"))
+                    events = []
+                    status = "unknown"
+                else:
+                    events = list(job.get("events", []))
+                    status = str(job.get("status", "unknown"))
 
-            while cursor < len(events):
-                event = events[cursor]
-                cursor += 1
-                yield f"data: {json.dumps(event, ensure_ascii=True)}\n\n"
-
-            if status in TERMINAL_STATUSES:
+            if job is None:
+                yield (
+                    "data: "
+                    f"{json.dumps({'agent': 'system', 'action': 'error', 'result_summary': 'Job not found', 'timestamp': _now_iso()}, ensure_ascii=True)}"
+                    "\n\n"
+                )
                 break
 
-            await asyncio.sleep(0.4)
+            if len(events) > last_index:
+                for event in events[last_index:]:
+                    yield f"data: {json.dumps(event, ensure_ascii=True)}\n\n"
+                last_index = len(events)
 
-        terminal_event = {
-            "agent": "manager",
-            "action": "stream_closed",
-            "result_summary": "Job stream closed.",
-            "timestamp": _now_iso(),
-        }
-        yield f"data: {json.dumps(terminal_event, ensure_ascii=True)}\n\n"
+            if status in TERMINAL_STATUSES and last_index >= len(events):
+                terminal_event = {
+                    "agent": "system",
+                    "action": "stream_closed",
+                    "result_summary": "Stream closed",
+                    "status": status,
+                    "timestamp": _now_iso(),
+                }
+                yield f"data: {json.dumps(terminal_event, ensure_ascii=True)}\n\n"
+                break
+
+            await asyncio.sleep(0.5)
 
     return StreamingResponse(
         _event_generator(),
         media_type="text/event-stream",
         headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache, no-transform",
             "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
         },
     )
 
