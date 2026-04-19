@@ -1,0 +1,29 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">huntr Open Graph Image</title>
+  <desc id="desc">huntr branding with AI agent pipeline highlights.</desc>
+  <rect width="1200" height="630" fill="#ffffff" />
+  <rect x="0" y="0" width="4" height="630" fill="#0066ff" />
+
+  <g font-family="Sora, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <text x="72" y="188" font-size="72" font-weight="700" fill="#000000">huntr</text>
+    <text x="72" y="262" font-size="36" fill="#374151">Your AI Sales Team.</text>
+    <text x="72" y="312" font-size="36" fill="#374151">Without the Payroll.</text>
+
+    <rect x="72" y="346" width="470" height="46" rx="23" fill="#eff6ff" />
+    <text x="93" y="376" font-size="18" fill="#1d4ed8">Powered by Google ADK + Gemini 2.5</text>
+
+    <text x="72" y="566" font-size="20" fill="#9ca3af">huntr.mohanprasath.dev</text>
+  </g>
+
+  <g>
+    <rect x="760" y="114" width="376" height="402" rx="12" fill="#0a0a0a" />
+    <g font-family="Sora, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="20" fill="#16a34a">
+      <text x="800" y="186">✓ Scout</text>
+      <text x="800" y="238">✓ Researcher</text>
+      <text x="800" y="290">✓ Scorer</text>
+      <text x="800" y="342">✓ Outreach</text>
+      <text x="800" y="394">✓ Followup</text>
+    </g>
+    <text x="800" y="470" font-family="Sora, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="20" fill="#0066ff">5 agents · 2 min · ₹0 per lead</text>
+  </g>
+</svg>

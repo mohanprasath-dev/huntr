@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import CampaignForm from "@/components/CampaignForm";
 import CampaignHistory from "@/components/CampaignHistory";
 import LiveStats from "@/components/LiveStats";
+
+export const metadata: Metadata = {
+  title: "Launch Hunt",
+  description: "Start an autonomous B2B lead generation campaign with 5 AI agents.",
+};
 
 export default function Home() {
   return (

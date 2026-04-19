@@ -1,4 +1,17 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Build Story",
+  description:
+    "How HuntR was built — from blank repo to production-deployed multi-agent AI system in under 12 hours.",
+  openGraph: {
+    title: "How HuntR was built in 12 hours",
+    description:
+      "From blank repo to production-deployed multi-agent AI system. Build story of HuntR by Mohan Prasath P.",
+    images: ["/og-image.png"],
+  },
+};
 
 const TIMELINE_ENTRIES = [
   {

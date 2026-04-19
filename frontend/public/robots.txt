@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /build
+Disallow: /app/
+Disallow: /app/hunt/
+Disallow: /app/campaigns/
+Sitemap: https://huntr.mohanprasath.dev/sitemap.xml
