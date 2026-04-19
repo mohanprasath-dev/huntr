@@ -1,0 +1,55 @@
+[
+  {
+    "timestamp": "2026-04-19T08:42:32.111671+00:00",
+    "run_id": "5c253e61-6ed7-42e7-a000-cc1ee35204f8",
+    "step": "manager:start",
+    "payload": {
+      "niche": "AI Services",
+      "pain_keyword": "manual outbound bottlenecks",
+      "max_leads": 20
+    }
+  },
+  {
+    "timestamp": "2026-04-19T08:42:43.830511+00:00",
+    "run_id": "5c253e61-6ed7-42e7-a000-cc1ee35204f8",
+    "step": "scout:attempt",
+    "payload": {
+      "attempt": 1,
+      "query": "AI Services manual outbound bottlenecks outbound bottleneck",
+      "found": 12,
+      "total_unique": 12
+    }
+  },
+  {
+    "timestamp": "2026-04-19T08:42:49.323901+00:00",
+    "run_id": "5c253e61-6ed7-42e7-a000-cc1ee35204f8",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 1,
+      "company": "Linkedin",
+      "domain": "linkedin.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T08:43:00.557895+00:00",
+    "run_id": "5c253e61-6ed7-42e7-a000-cc1ee35204f8",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 2,
+      "company": "Facebook",
+      "domain": "facebook.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T08:43:00.560395+00:00",
+    "run_id": "5c253e61-6ed7-42e7-a000-cc1ee35204f8",
+    "step": "manager:hunt_stopped",
+    "payload": {
+      "result_summary": "Hunt stopped by user after 3 steps",
+      "steps_completed": 3
+    },
+    "agent": "manager",
+    "action": "hunt_stopped",
+    "result_summary": "Hunt stopped by user after 3 steps"
+  }
+]

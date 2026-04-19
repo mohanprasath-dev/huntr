@@ -17,9 +17,22 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HuntR | Autonomous Client Acquisition",
+  title: "HuntR — Autonomous B2B Client Acquisition",
   description:
-    "HuntR dashboard for launching campaigns, monitoring agent traces, and managing outbound-ready leads.",
+    "5 AI agents that find, research, score and personally message your next B2B client in under 2 minutes. Built for Indian startups.",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
+  openGraph: {
+    title: "HuntR — Autonomous B2B Client Acquisition",
+    description:
+      "5 AI agents that find, research, score and personally message your next B2B client in under 2 minutes. Built for Indian startups.",
+    url: "https://huntr.app",
+    type: "website",
+  },
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
