@@ -14,13 +14,39 @@ class ScoutAgent:
     name = "Lead Scout"
     goal = "Find 20 potential B2B leads showing pain signals matching the target niche"
 
-    _COMPANY_PATTERN = re.compile(
-        r"([A-Z][A-Za-z0-9&.\- ]{2,60}\s(?:Inc|LLC|Ltd|Limited|Technologies|Solutions|Labs|Systems|Corp))"
-    )
     _EMAIL_PATTERN = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
     _ROLE_PATTERN = re.compile(
         r"((?:CEO|Founder|Co-Founder|CTO|Head of Sales|VP Sales|Director)\b[^,.|]{0,50})",
         re.IGNORECASE,
+    )
+    _MULTIPART_TLDS = {
+        "co.in",
+        "org.in",
+        "net.in",
+        "gov.in",
+        "ac.in",
+        "co.uk",
+        "com.au",
+    }
+    _BLOCKED_DOMAIN_TERMS = (
+        "medium.com",
+        "substack.com",
+        "youtube.com",
+        "reddit.com",
+    )
+    _BLOCKED_URL_TERMS = (
+        "blog",
+        "article",
+        "news",
+    )
+    _COMPANY_PAGE_HINTS = (
+        "/company/",
+        "/companies/",
+        "/organization/",
+        "/about",
+        "/about-us",
+        "/our-company",
+        "/profile/company",
     )
 
     def __init__(
@@ -33,22 +59,31 @@ class ScoutAgent:
         self.tavily_tool = tavily_tool or TavilyTool()
         self.gemini_llm = gemini_llm
 
-    def find_candidates(self, niche: str, max_leads: int = 20) -> list[dict[str, Any]]:
+    def find_candidates(
+        self,
+        niche: str,
+        max_leads: int = 20,
+        pain_keyword: str = "",
+    ) -> list[dict[str, Any]]:
         safe_max_leads = max(1, min(max_leads, 50))
-        serper_hits = self._serper_hits(niche=niche, max_leads=safe_max_leads)
-        tavily_hits = self._tavily_hits(niche=niche, max_leads=safe_max_leads)
-        raw_hits = self._merge_hits(serper_hits, tavily_hits)
+        serper_hits = self._serper_hits(
+            niche=niche,
+            pain_keyword=pain_keyword,
+            max_leads=safe_max_leads,
+        )
+        raw_hits = self._merge_hits(serper_hits)
 
         leads: list[dict[str, Any]] = []
-        seen_urls: set[str] = set()
+        seen_domains: set[str] = set()
         for hit in raw_hits:
             url = str(hit.get("url", "")).strip()
-            if not url or url in seen_urls:
+            domain = self._extract_root_domain(url)
+            if not url or not domain or domain in seen_domains:
                 continue
 
             title = str(hit.get("title", "")).strip()
             snippet = str(hit.get("snippet", "")).strip()
-            company_name = self._extract_company_name(title=title, snippet=snippet, url=url)
+            company_name = self._extract_company_name(url=url)
             contact_hint = self._extract_contact_hint(title=title, snippet=snippet, url=url)
 
             leads.append(
@@ -60,35 +95,49 @@ class ScoutAgent:
                     "pain_signal": snippet,
                 }
             )
-            seen_urls.add(url)
+            seen_domains.add(domain)
 
             if len(leads) >= safe_max_leads:
                 break
 
         return leads
 
-    def _serper_hits(self, niche: str, max_leads: int) -> list[dict[str, str]]:
+    def _serper_hits(self, niche: str, pain_keyword: str, max_leads: int) -> list[dict[str, Any]]:
+        cleaned_niche = niche.strip()
+        cleaned_pain_keyword = pain_keyword.strip() or cleaned_niche
         queries = [
-            f"{niche} struggling with outbound growth B2B",
-            f"{niche} hiring sales team but low pipeline",
-            f"{niche} looking for lead generation agency",
-            f"{niche} manual prospecting bottleneck",
+            f"{cleaned_niche} company India startup hiring sales",
+            f"founder CEO {cleaned_niche} startup India site:linkedin.com",
+            f"{cleaned_pain_keyword} {cleaned_niche} startup India looking for solution",
+            f"{cleaned_niche} service provider India",
+            f"{cleaned_niche} startups India funded 2024 2025",
         ]
 
-        hits: list[dict[str, str]] = []
+        hits: list[dict[str, Any]] = []
         per_query = max(5, min(12, max_leads))
-        for query in queries:
+        for query_index, query in enumerate(queries):
             results = self.serper_tool.search(query=query, num_results=per_query)
             for item in results:
+                url = str(item.get("link", "")).strip()
+                if not url or self._should_exclude_url(url):
+                    continue
+
                 hits.append(
                     {
                         "source": "serper",
-                        "url": str(item.get("link", "")).strip(),
+                        "url": url,
                         "title": str(item.get("title", "")).strip(),
                         "snippet": str(item.get("snippet", "")).strip(),
+                        "query_index": query_index,
+                        "is_homepage": self._is_company_homepage(url),
                     }
                 )
-
+        hits.sort(
+            key=lambda hit: (
+                not bool(hit.get("is_homepage", False)),
+                int(hit.get("query_index", 0)),
+            )
+        )
         return hits
 
     def _tavily_hits(self, niche: str, max_leads: int) -> list[dict[str, str]]:
@@ -114,36 +163,65 @@ class ScoutAgent:
 
         return hits
 
-    def _merge_hits(
-        self,
-        serper_hits: list[dict[str, str]],
-        tavily_hits: list[dict[str, str]],
-    ) -> list[dict[str, str]]:
-        merged: list[dict[str, str]] = []
-        seen: set[str] = set()
-        for item in serper_hits + tavily_hits:
+    def _merge_hits(self, serper_hits: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        merged: list[dict[str, Any]] = []
+        seen_domains: set[str] = set()
+        for item in serper_hits:
             url = str(item.get("url", "")).strip()
-            if not url or url in seen:
+            domain = self._extract_root_domain(url)
+            if not url or not domain or domain in seen_domains:
                 continue
-            seen.add(url)
+            seen_domains.add(domain)
             merged.append(item)
         return merged
 
-    def _extract_company_name(self, title: str, snippet: str, url: str) -> str:
-        source_text = f"{title} {snippet}".strip()
-        company_match = self._COMPANY_PATTERN.search(source_text)
-        if company_match:
-            return company_match.group(1).strip()
-
-        title_head = title.split("|")[0].split("-")[0].strip()
-        if title_head and len(title_head) > 2:
-            return title_head
-
-        host = urlparse(url).netloc.lower().replace("www.", "")
-        domain_head = host.split(".")[0] if host else ""
-        if domain_head:
-            return domain_head.replace("-", " ").title()
+    def _extract_company_name(self, url: str) -> str:
+        root_domain = self._extract_root_domain(url)
+        if root_domain:
+            domain_head = root_domain.split(".")[0]
+            cleaned_name = re.sub(r"[^A-Za-z0-9]+", " ", domain_head).strip()
+            if cleaned_name:
+                return cleaned_name.title()
         return "Unknown Company"
+
+    def _extract_root_domain(self, url: str) -> str:
+        host = urlparse(url).netloc.lower().replace("www.", "")
+        host = host.split(":")[0]
+        if not host:
+            return ""
+
+        host_parts = [part for part in host.split(".") if part]
+        if len(host_parts) <= 2:
+            return ".".join(host_parts)
+
+        tail = ".".join(host_parts[-2:])
+        if tail in self._MULTIPART_TLDS and len(host_parts) >= 3:
+            return ".".join(host_parts[-3:])
+
+        return ".".join(host_parts[-2:])
+
+    def _is_explicit_company_page(self, url: str) -> bool:
+        lowered = url.lower()
+        return any(hint in lowered for hint in self._COMPANY_PAGE_HINTS)
+
+    def _should_exclude_url(self, url: str) -> bool:
+        lowered = url.lower()
+        if self._is_explicit_company_page(lowered):
+            return False
+
+        if any(term in lowered for term in self._BLOCKED_DOMAIN_TERMS):
+            return True
+
+        return any(term in lowered for term in self._BLOCKED_URL_TERMS)
+
+    def _is_company_homepage(self, url: str) -> bool:
+        parsed = urlparse(url)
+        path = parsed.path.lower().strip()
+        if any(marker in path for marker in ("/blog/", "/post/", "/article/")):
+            return False
+
+        normalized_path = path.strip("/")
+        return normalized_path in {"", "home", "index", "index.html"}
 
     def _extract_contact_hint(self, title: str, snippet: str, url: str) -> str:
         text = f"{title} {snippet} {url}".strip()

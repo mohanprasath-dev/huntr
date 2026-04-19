@@ -217,7 +217,11 @@ class HuntRManager:
         demo_mode: bool = False,
     ) -> list[dict[str, Any]]:
         base_query = self._build_query_variations(niche=niche, pain_keyword=pain_keyword)[0]
-        leads = self.scout.find_candidates(niche=base_query, max_leads=max_leads)
+        leads = self.scout.find_candidates(
+            niche=base_query,
+            pain_keyword=pain_keyword,
+            max_leads=max_leads,
+        )
         merged = self._merge_unique_leads([], leads)
         demo_self_correction_forced = False
 
@@ -246,7 +250,11 @@ class HuntRManager:
 
         retry_queries = self._build_query_variations(niche=niche, pain_keyword=pain_keyword)[1:]
         for retry_index, query in enumerate(retry_queries, start=2):
-            retry_results = self.scout.find_candidates(niche=query, max_leads=max_leads)
+            retry_results = self.scout.find_candidates(
+                niche=query,
+                pain_keyword=pain_keyword,
+                max_leads=max_leads,
+            )
             merged = self._merge_unique_leads(merged, retry_results)
 
             self._log_step(
