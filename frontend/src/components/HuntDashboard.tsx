@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import AgentPipeline from "@/components/AgentPipeline";
 import ImpactBar from "@/components/ImpactBar";
 import LeadCard from "@/components/LeadCard";
+import LoadingSkeleton from "@/components/LoadingSkeleton";
 import StatsBar from "@/components/StatsBar";
 import { HUNTR_API_BASE_URL, getJobLeads, getJobStatus } from "@/lib/huntr-api";
 import type { JobImpact, JobStatusResponse, Lead } from "@/lib/huntr-types";
@@ -201,6 +202,7 @@ export default function HuntDashboard({
   const activeFilterCount = Number(scoreFilter !== "all") + Number(sourceFilter !== "all");
   const API_BASE_URL = HUNTR_API_BASE_URL;
   const canExportCsv = status?.status === "completed" && leads.length > 0;
+  const showLeadSkeletons = isInitialLoading || status?.status === "running";
 
   return (
     <div className="mx-auto w-full max-w-screen-2xl px-4 pb-12 pt-8 md:px-8">
@@ -324,10 +326,16 @@ export default function HuntDashboard({
           </div>
         </div>
 
-        {isInitialLoading ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="h-56 animate-pulse rounded-2xl border border-white/10 bg-white/3" />
-            <div className="h-56 animate-pulse rounded-2xl border border-white/10 bg-white/3" />
+        {showLeadSkeletons ? (
+          <div className="grid gap-5">
+            {[0, 1, 2].map((index) => (
+              <LoadingSkeleton
+                key={`lead-loading-skeleton-${index}`}
+                width="100%"
+                height="36rem"
+                borderRadius="1rem"
+              />
+            ))}
           </div>
         ) : processedLeads.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-panel p-6 text-sm text-muted">
