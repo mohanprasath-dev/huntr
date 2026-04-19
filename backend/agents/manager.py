@@ -14,6 +14,7 @@ from agents.outreach_agent import OutreachAgent
 from agents.researcher_agent import ResearcherAgent
 from agents.scorer_agent import ScorerAgent
 from agents.scout_agent import ScoutAgent
+from job_state import JOBS, JOBS_LOCK
 
 try:
     from google.adk.models import Gemini
@@ -117,11 +118,17 @@ class HuntRManager:
         }
         return self.run_huntr(config=config, max_leads=max_leads)
 
-    def run_huntr(self, config: Mapping[str, Any], max_leads: int = 20) -> list[dict[str, Any]]:
+    def run_huntr(
+        self,
+        config: Mapping[str, Any],
+        max_leads: int = 20,
+        job_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         normalized_config = self._normalize_config(config)
         demo_mode = self._as_bool(config.get("demo_mode")) if isinstance(config, Mapping) else False
         safe_max_leads = max(1, min(max_leads, 50))
         run_id = str(uuid4())
+        completed_steps = 0
 
         self._log_step(
             run_id=run_id,
@@ -140,6 +147,12 @@ class HuntRManager:
             max_leads=safe_max_leads,
             demo_mode=demo_mode,
         )
+        completed_steps += 1
+
+        if self._stop_requested(job_id=job_id):
+            self._log_hunt_stopped(run_id=run_id, steps_completed=completed_steps)
+            self._mark_job_stopped(job_id=job_id)
+            return scout_leads[:safe_max_leads]
 
         if not scout_leads:
             self._log_step(
@@ -153,6 +166,7 @@ class HuntRManager:
         for index, lead in enumerate(scout_leads, start=1):
             enriched = self.researcher.enrich(lead)
             enriched_leads.append(enriched)
+            completed_steps += 1
             self._log_step(
                 run_id=run_id,
                 step="researcher:enrich",
@@ -163,7 +177,19 @@ class HuntRManager:
                 },
             )
 
+            if self._stop_requested(job_id=job_id):
+                self._log_hunt_stopped(run_id=run_id, steps_completed=completed_steps)
+                self._mark_job_stopped(job_id=job_id)
+                return enriched_leads
+
         scored_leads = self._score_with_self_correction(run_id=run_id, leads=enriched_leads)
+        completed_steps += 1
+
+        if self._stop_requested(job_id=job_id):
+            self._log_hunt_stopped(run_id=run_id, steps_completed=completed_steps)
+            self._mark_job_stopped(job_id=job_id)
+            return scored_leads
+
         if not scored_leads:
             self._log_step(
                 run_id=run_id,
@@ -176,6 +202,7 @@ class HuntRManager:
         for index, lead in enumerate(scored_leads, start=1):
             scored_with_sender = self._attach_sender_profile(lead=lead, config=normalized_config)
             drafted = self.outreach.draft_outreach(scored_with_sender)
+            completed_steps += 1
             self._log_step(
                 run_id=run_id,
                 step="outreach:draft",
@@ -185,7 +212,14 @@ class HuntRManager:
                 },
             )
 
+            if self._stop_requested(job_id=job_id):
+                self._log_hunt_stopped(run_id=run_id, steps_completed=completed_steps)
+                self._mark_job_stopped(job_id=job_id)
+                processed.append(drafted)
+                return processed
+
             sequenced = self.followup.build_sequence(drafted)
+            completed_steps += 1
             self._log_step(
                 run_id=run_id,
                 step="followup:build_sequence",
@@ -197,6 +231,11 @@ class HuntRManager:
             )
 
             processed.append(sequenced)
+
+            if self._stop_requested(job_id=job_id):
+                self._log_hunt_stopped(run_id=run_id, steps_completed=completed_steps)
+                self._mark_job_stopped(job_id=job_id)
+                return processed
 
         processed.sort(key=lambda item: item.get("score", 0.0), reverse=True)
 
@@ -420,6 +459,44 @@ class HuntRManager:
             return bool(value)
         return False
 
+    def _stop_requested(self, job_id: str | None) -> bool:
+        if not job_id:
+            return False
+
+        with JOBS_LOCK:
+            job = JOBS.get(job_id)
+            if job is None:
+                return False
+            return bool(job.get("stop_requested", False))
+
+    def _mark_job_stopped(self, job_id: str | None) -> None:
+        if not job_id:
+            return
+
+        with JOBS_LOCK:
+            job = JOBS.get(job_id)
+            if job is None:
+                return
+            job["stop_requested"] = True
+            job["status"] = "stopped"
+            job["current_agent"] = "manager"
+
+    def _log_hunt_stopped(self, run_id: str, steps_completed: int) -> None:
+        self._append_trace_event(
+            {
+                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+                "run_id": run_id,
+                "step": "manager:hunt_stopped",
+                "payload": {
+                    "result_summary": f"Hunt stopped by user after {steps_completed} steps",
+                    "steps_completed": steps_completed,
+                },
+                "agent": "manager",
+                "action": "hunt_stopped",
+                "result_summary": f"Hunt stopped by user after {steps_completed} steps",
+            }
+        )
+
     def _log_demo_trace_event(self, run_id: str, action: str, result_summary: str) -> None:
         now = datetime.now(tz=timezone.utc).isoformat()
         self._append_trace_event(
@@ -462,9 +539,13 @@ class HuntRManager:
         )
 
 
-def run_huntr(config: Mapping[str, Any], max_leads: int = 20) -> list[dict[str, Any]]:
+def run_huntr(
+    config: Mapping[str, Any],
+    max_leads: int = 20,
+    job_id: str | None = None,
+) -> list[dict[str, Any]]:
     manager = HuntRManager()
-    return manager.run_huntr(config=config, max_leads=max_leads)
+    return manager.run_huntr(config=config, max_leads=max_leads, job_id=job_id)
 
 
 __all__ = ["HuntRManager", "gemini_llm", "run_huntr"]

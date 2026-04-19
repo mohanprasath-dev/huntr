@@ -18,6 +18,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
+from job_state import JOBS, JOBS_LOCK
 
 from agents.manager import HuntRManager
 from db.campaign_store import get_campaign, list_campaigns, save_campaign
@@ -37,11 +38,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-JOBS: dict[str, dict[str, Any]] = {}
-JOBS_LOCK = threading.Lock()
 tracking_store: dict[str, dict[str, Any]] = {}
 tracking_store_lock = threading.Lock()
-TERMINAL_STATUSES = {"completed", "failed"}
+TERMINAL_STATUSES = {"completed", "failed", "stopped"}
 TIME_SAVED_MINUTES_BASELINE = 180
 MANUAL_COST_PER_QUALIFIED_LEAD_INR = 840
 VS_MANUAL_SUMMARY = (
@@ -380,7 +379,7 @@ def _run_hunt_job(job_id: str, config: dict[str, Any]) -> None:
 
     def _invoke_run_huntr() -> None:
         try:
-            result_box["leads"] = manager.run_huntr(config=config, max_leads=20)
+            result_box["leads"] = manager.run_huntr(config=config, max_leads=20, job_id=job_id)
         except Exception as exc:  # pragma: no cover - network/credentials sensitive path
             error_box["error"] = str(exc)
 
@@ -396,30 +395,52 @@ def _run_hunt_job(job_id: str, config: dict[str, Any]) -> None:
     cursor = _ingest_trace_events(job_id=job_id, trace_path=trace_path, cursor=cursor)
 
     if error_box:
+        final_status = "failed"
         with JOBS_LOCK:
             job = JOBS.get(job_id)
             if job is not None:
-                job["status"] = "failed"
+                if str(job.get("status", "")).lower() == "stopped" or bool(
+                    job.get("stop_requested", False)
+                ):
+                    final_status = "stopped"
+                job["status"] = final_status
                 job["error"] = error_box["error"]
-        _record_step(
-            job_id=job_id,
-            agent="manager",
-            action="failed",
-            result_summary="Pipeline failed. Check error details.",
-            timestamp=_now_iso(),
-            payload={},
-        )
+
+        if final_status == "stopped":
+            _record_step(
+                job_id=job_id,
+                agent="manager",
+                action="stopped",
+                result_summary="Job stopped before pipeline completion.",
+                timestamp=_now_iso(),
+                payload={},
+            )
+        else:
+            _record_step(
+                job_id=job_id,
+                agent="manager",
+                action="failed",
+                result_summary="Pipeline failed. Check error details.",
+                timestamp=_now_iso(),
+                payload={},
+            )
         return
 
     raw_leads = result_box.get("leads") or []
     formatted = _format_leads(raw_leads)
     completed_at_iso = _now_iso()
     completed_at_epoch = time.time()
+    final_status = "completed"
+
     with JOBS_LOCK:
         job = JOBS.get(job_id)
         if job is None:
             return
-        job["status"] = "completed"
+
+        if str(job.get("status", "")).lower() == "stopped" or bool(job.get("stop_requested", False)):
+            final_status = "stopped"
+
+        job["status"] = final_status
         job["raw_leads"] = raw_leads
         job["leads"] = formatted
         job["completed_at"] = completed_at_iso
@@ -436,14 +457,24 @@ def _run_hunt_job(job_id: str, config: dict[str, Any]) -> None:
         if int(job.get("leads_scored", 0)) == 0:
             job["leads_scored"] = len(raw_leads)
 
-    _record_step(
-        job_id=job_id,
-        agent="manager",
-        action="ready",
-        result_summary=f"Job complete. {len(formatted)} leads ready.",
-        timestamp=_now_iso(),
-        payload={},
-    )
+    if final_status == "stopped":
+        _record_step(
+            job_id=job_id,
+            agent="manager",
+            action="stopped",
+            result_summary=f"Job stopped. {len(formatted)} partial leads available.",
+            timestamp=_now_iso(),
+            payload={},
+        )
+    else:
+        _record_step(
+            job_id=job_id,
+            agent="manager",
+            action="ready",
+            result_summary=f"Job complete. {len(formatted)} leads ready.",
+            timestamp=_now_iso(),
+            payload={},
+        )
 
     with JOBS_LOCK:
         completed_job = JOBS.get(job_id)
@@ -479,6 +510,11 @@ class DemoSelfCorrectRequest(BaseModel):
 
 
 class HuntStartResponse(BaseModel):
+    job_id: str
+    status: str
+
+
+class HuntStopResponse(BaseModel):
     job_id: str
     status: str
 
@@ -564,6 +600,7 @@ def run_hunt(request: HuntRequest) -> HuntStartResponse:
             "events": [],
             "raw_leads": [],
             "leads": [],
+            "stop_requested": False,
             "config": config,
             "created_at": _now_iso(),
             "started_at_epoch": started_at_epoch,
@@ -572,6 +609,24 @@ def run_hunt(request: HuntRequest) -> HuntStartResponse:
     worker = threading.Thread(target=_run_hunt_job, args=(job_id, config), daemon=True)
     worker.start()
     return HuntStartResponse(job_id=job_id, status="started")
+
+
+@app.post("/hunt/{job_id}/stop", response_model=HuntStopResponse)
+def stop_hunt(job_id: str) -> HuntStopResponse:
+    with JOBS_LOCK:
+        job = JOBS.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
+
+        status = str(job.get("status", "unknown")).lower()
+        if status != "running":
+            raise HTTPException(status_code=404, detail=f"Job {job_id} is not running.")
+
+        job["stop_requested"] = True
+        job["status"] = "stopped"
+        job["current_agent"] = "manager"
+
+    return HuntStopResponse(job_id=job_id, status="stopped")
 
 
 @app.post("/demo/self-correct", response_model=DemoSelfCorrectResponse)
@@ -598,6 +653,7 @@ def run_demo_self_correct(request: DemoSelfCorrectRequest) -> DemoSelfCorrectRes
             "events": [],
             "raw_leads": [],
             "leads": [],
+            "stop_requested": False,
             "config": config,
             "demo_mode": True,
             "created_at": _now_iso(),
