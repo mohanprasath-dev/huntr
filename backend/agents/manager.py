@@ -29,7 +29,6 @@ _TRACE_LOG_PATH = Path(__file__).resolve().parents[1] / "logs" / "trace.json"
 _REQUIRED_VERTEX_ENV_VARS = (
     "GOOGLE_CLOUD_PROJECT",
     "GOOGLE_CLOUD_LOCATION",
-    "GOOGLE_APPLICATION_CREDENTIALS",
 )
 _GEMINI_MODEL = "gemini-2.5-flash"
 _MIN_SCOUT_LEADS = 5
@@ -51,23 +50,27 @@ def _load_vertex_settings() -> tuple[str, str]:
     if missing:
         missing_csv = ", ".join(missing)
         raise RuntimeError(
-            f"Missing required Google Vertex credentials in {_BACKEND_ENV_PATH}: {missing_csv}. "
+            f"Missing required Google Vertex settings in {_BACKEND_ENV_PATH}: {missing_csv}. "
             "Add these values to backend/.env before starting the app."
         )
 
     project = os.environ["GOOGLE_CLOUD_PROJECT"].strip()
     location = os.environ["GOOGLE_CLOUD_LOCATION"].strip()
-    credentials_path = Path(os.environ["GOOGLE_APPLICATION_CREDENTIALS"]).expanduser()
 
-    if not credentials_path.exists():
-        raise RuntimeError(
-            "GOOGLE_APPLICATION_CREDENTIALS points to a missing file: "
-            f"{credentials_path}. Update backend/.env with a valid key path."
-        )
+    credentials_value = str(os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")).strip()
+    if credentials_value:
+        credentials_path = Path(credentials_value).expanduser()
+        if credentials_path.exists():
+            # Local development can provide an explicit service account key file.
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(credentials_path)
+        else:
+            # On Cloud Run, rely on Application Default Credentials when the key file is absent.
+            os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+    else:
+        os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
 
     os.environ["GOOGLE_CLOUD_PROJECT"] = project
     os.environ["GOOGLE_CLOUD_LOCATION"] = location
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(credentials_path)
     os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "1"
 
     return project, location
