@@ -492,6 +492,7 @@ def _run_hunt_job(job_id: str, config: dict[str, Any]) -> None:
         trace_payload = dict(campaign.get("trace") or {})
         trace_payload["raw_trace_events"] = _read_trace_events(trace_path)
 
+        print(f"[API] Saving campaign {job_id} to Firestore")
         save_campaign(
             job_id=job_id,
             config=dict(campaign.get("config") or {}),
@@ -500,6 +501,7 @@ def _run_hunt_job(job_id: str, config: dict[str, Any]) -> None:
             impact=dict(campaign.get("impact") or {}),
             trace=trace_payload,
         )
+        print(f"[API] Campaign {job_id} saved to Firestore")
 
 
 class HuntRequest(BaseModel):
@@ -791,8 +793,8 @@ def export_leads_csv(job_id: str) -> StreamingResponse:
 
 
 @app.get("/campaigns")
-def get_campaign_history() -> list[dict[str, Any]]:
-    return list_campaigns(limit=10)
+def get_campaign_history(limit: int = 10) -> list[dict[str, Any]]:
+    return list_campaigns(limit=limit)
 
 
 @app.get("/campaigns/{job_id}")

@@ -11,7 +11,31 @@ from db.firestore_client import CAMPAIGNS_COLLECTION, db
 def _to_iso8601(value: Any) -> str | None:
     if isinstance(value, datetime):
         return value.isoformat()
+    if isinstance(value, str):
+        normalized = value.strip()
+        return normalized or None
     return None
+
+
+def _created_at_sort_key(value: Any) -> float:
+    if isinstance(value, datetime):
+        return value.timestamp()
+
+    if isinstance(value, str):
+        normalized = value.strip()
+        if not normalized:
+            return 0.0
+
+        # Firestore exports may use Z suffix while datetime.fromisoformat expects +00:00.
+        if normalized.endswith("Z"):
+            normalized = f"{normalized[:-1]}+00:00"
+
+        try:
+            return datetime.fromisoformat(normalized).timestamp()
+        except ValueError:
+            return 0.0
+
+    return 0.0
 
 
 def _collection() -> firestore.CollectionReference | None:
@@ -30,7 +54,10 @@ def save_campaign(
 ) -> None:
     collection = _collection()
     if collection is None:
+        print(f"[Firestore] Skipping save for campaign {job_id}: client unavailable")
         return
+
+    print(f"[Firestore] Saving campaign {job_id}")
 
     try:
         doc_ref = collection.document(job_id)
@@ -54,8 +81,10 @@ def save_campaign(
             },
             merge=True,
         )
-    except Exception:
-        return
+        print(f"[Firestore] Campaign {job_id} saved successfully")
+    except Exception as exc:
+        print(f"[Firestore] ERROR saving campaign {job_id}: {exc}")
+        raise
 
 
 def get_campaign(job_id: str) -> dict[str, Any] | None:
@@ -85,36 +114,58 @@ def get_campaign(job_id: str) -> dict[str, Any] | None:
 def list_campaigns(limit: int = 10) -> list[dict[str, Any]]:
     collection = _collection()
     if collection is None:
+        print("[Firestore] list_campaigns skipped: client unavailable")
         return []
 
     safe_limit = max(1, int(limit or 10))
+    snapshots: list[Any] = []
+    used_fallback_sort = False
 
     try:
         query = collection.order_by("created_at", direction=firestore.Query.DESCENDING).limit(
             safe_limit
         )
         snapshots = list(query.stream())
-    except Exception:
-        return []
+    except Exception as exc:
+        print(f"[Firestore] ERROR listing campaigns with created_at ordering: {exc}")
+        try:
+            # Fall back to unordered reads when created_at types are mixed (string vs timestamp).
+            snapshots = list(collection.limit(max(safe_limit * 5, safe_limit)).stream())
+            used_fallback_sort = True
+        except Exception as fallback_exc:
+            print(f"[Firestore] ERROR listing campaigns: {fallback_exc}")
+            return []
 
-    campaigns: list[dict[str, Any]] = []
+    campaigns_with_sort_key: list[tuple[dict[str, Any], float]] = []
     for snapshot in snapshots:
         data = snapshot.to_dict() or {}
         config = data.get("config") if isinstance(data.get("config"), dict) else {}
         leads = data.get("leads") if isinstance(data.get("leads"), list) else []
         leads_count = data.get("leads_count")
+        created_at_raw = data.get("created_at")
+        created_at_iso = _to_iso8601(created_at_raw)
 
-        campaigns.append(
-            {
-                "job_id": str(data.get("job_id") or snapshot.id),
-                "niche": str(config.get("niche", "")),
-                "pain_keyword": str(config.get("pain_keyword", "")),
-                "leads_count": int(leads_count) if isinstance(leads_count, int) else len(leads),
-                "created_at": _to_iso8601(data.get("created_at")),
-                "status": str(data.get("status") or "unknown"),
-            }
+        campaigns_with_sort_key.append(
+            (
+                {
+                    "job_id": str(data.get("job_id") or snapshot.id),
+                    "niche": str(config.get("niche", "") or data.get("niche", "")),
+                    "pain_keyword": str(
+                        config.get("pain_keyword", "") or data.get("pain_keyword", "")
+                    ),
+                    "leads_count": int(leads_count) if isinstance(leads_count, int) else len(leads),
+                    "created_at": created_at_iso,
+                    "status": str(data.get("status") or "unknown"),
+                },
+                _created_at_sort_key(created_at_raw),
+            )
         )
 
+    if used_fallback_sort:
+        campaigns_with_sort_key.sort(key=lambda item: item[1], reverse=True)
+
+    campaigns = [campaign for campaign, _ in campaigns_with_sort_key[:safe_limit]]
+    print(f"[Firestore] list_campaigns returned {len(campaigns)} campaigns")
     return campaigns
 
 

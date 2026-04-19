@@ -33,32 +33,22 @@ function isTerminalStatus(status: string): boolean {
 }
 
 function toInitialConfig(campaign: CampaignDetail): HuntRequestPayload | null {
-  const config =
+  const campaignRecord = campaign as CampaignDetail & Record<string, unknown>;
+  const nestedConfig =
     campaign.config && typeof campaign.config === "object"
       ? (campaign.config as Record<string, unknown>)
-      : null;
+      : {};
 
-  if (!config) {
-    return null;
-  }
-
-  const niche = String(config.niche ?? "").trim();
-  const painKeyword = String(config.pain_keyword ?? "").trim();
-  const senderName = String(config.sender_name ?? "").trim();
-  const senderCompany = String(config.sender_company ?? "").trim();
-  const senderService = String(config.sender_service ?? "").trim();
-
-  if (!niche || !painKeyword || !senderName || !senderCompany || !senderService) {
-    return null;
-  }
-
-  return {
-    niche,
-    pain_keyword: painKeyword,
-    sender_name: senderName,
-    sender_company: senderCompany,
-    sender_service: senderService,
+  const config: HuntRequestPayload = {
+    niche: String(nestedConfig.niche ?? campaign.niche ?? "").trim(),
+    pain_keyword: String(nestedConfig.pain_keyword ?? campaign.pain_keyword ?? "").trim(),
+    sender_name: String(nestedConfig.sender_name ?? campaignRecord.sender_name ?? "").trim(),
+    sender_company: String(nestedConfig.sender_company ?? campaignRecord.sender_company ?? "").trim(),
+    sender_service: String(nestedConfig.sender_service ?? campaignRecord.sender_service ?? "").trim(),
   };
+
+  const hasAtLeastOneField = Object.values(config).some((value) => value.length > 0);
+  return hasAtLeastOneField ? config : null;
 }
 
 function buildStatusFromCampaign(jobId: string, campaign: CampaignDetail): JobStatusResponse {

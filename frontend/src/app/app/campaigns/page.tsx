@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
-import { getCampaignHistory } from "@/lib/huntr-api";
+import { HUNTR_API_BASE_URL, getCampaignHistory } from "@/lib/huntr-api";
 import type { CampaignComparison, CampaignSummary } from "@/lib/huntr-types";
 
 function statusBadgeClass(status: string): string {
@@ -191,17 +191,32 @@ export default function CampaignsPage() {
     let isMounted = true;
 
     const loadCampaigns = async (): Promise<void> => {
+      console.log("[CampaignsPage] Loading campaign history from", HUNTR_API_BASE_URL);
+
       try {
         const result = await getCampaignHistory(20);
+        console.log("[CampaignsPage] getCampaignHistory response", result);
+
         if (!isMounted) {
           return;
         }
-        setCampaigns(Array.isArray(result) ? result.slice(0, 20) : []);
-        setErrorMessage("");
+
+        const normalizedCampaigns = Array.isArray(result) ? result.slice(0, 20) : [];
+        setCampaigns(normalizedCampaigns);
+
+        if (normalizedCampaigns.length === 0) {
+          setErrorMessage(
+            `No campaigns returned from ${HUNTR_API_BASE_URL}/campaigns. Check backend Firestore logs.`,
+          );
+        } else {
+          setErrorMessage("");
+        }
       } catch (error) {
         if (!isMounted) {
           return;
         }
+
+        console.error("[CampaignsPage] Failed to load campaign history", error);
         const detail = error instanceof Error ? error.message : "Unable to load campaign history.";
         setErrorMessage(detail);
       } finally {
@@ -317,7 +332,9 @@ export default function CampaignsPage() {
         </div>
       ) : campaigns.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-[#e5e7eb] bg-white px-6 py-10 text-center">
-          <p className="text-base text-[#6b7280]">No campaigns yet. Start your first hunt.</p>
+          <p className="text-base text-[#6b7280]">
+            {errorMessage || "No campaigns yet. Start your first hunt."}
+          </p>
         </div>
       ) : (
         <section className="mt-8 space-y-4">

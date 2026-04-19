@@ -44,6 +44,13 @@ interface LeadWithMeta {
 }
 
 const ABOVE_THRESHOLD_SCORE = 70;
+const DEFAULT_RESUME_CONFIG: HuntRequestPayload = {
+  niche: "AI services",
+  pain_keyword: "need automation",
+  sender_name: "Mohan Prasath",
+  sender_company: "Taskdrift",
+  sender_service: "AI automation for Indian startups",
+};
 
 function deriveLeadSource(lead: Lead): LeadSource {
   const explicitSource = String(lead.source || "").toLowerCase();
@@ -104,32 +111,29 @@ function statusTone(status: string): string {
   return "border-[#e5e7eb] bg-[#f3f4f6] text-[#6b7280]";
 }
 
-function toResumeConfig(campaign: CampaignDetail): HuntRequestPayload | null {
-  const config =
+function toResumeConfig(campaign: CampaignDetail): HuntRequestPayload {
+  const campaignRecord = campaign as CampaignDetail & Record<string, unknown>;
+  const nestedConfig =
     campaign.config && typeof campaign.config === "object"
       ? (campaign.config as Record<string, unknown>)
-      : null;
-
-  if (!config) {
-    return null;
-  }
-
-  const niche = String(config.niche ?? "").trim();
-  const painKeyword = String(config.pain_keyword ?? "").trim();
-  const senderName = String(config.sender_name ?? "").trim();
-  const senderCompany = String(config.sender_company ?? "").trim();
-  const senderService = String(config.sender_service ?? "").trim();
-
-  if (!niche || !painKeyword || !senderName || !senderCompany || !senderService) {
-    return null;
-  }
+      : {};
 
   return {
-    niche,
-    pain_keyword: painKeyword,
-    sender_name: senderName,
-    sender_company: senderCompany,
-    sender_service: senderService,
+    niche: String(nestedConfig.niche ?? campaign.niche ?? "").trim(),
+    pain_keyword: String(nestedConfig.pain_keyword ?? campaign.pain_keyword ?? "").trim(),
+    sender_name: String(nestedConfig.sender_name ?? campaignRecord.sender_name ?? "").trim(),
+    sender_company: String(nestedConfig.sender_company ?? campaignRecord.sender_company ?? "").trim(),
+    sender_service: String(nestedConfig.sender_service ?? campaignRecord.sender_service ?? "").trim(),
+  };
+}
+
+function buildResumePayload(config: HuntRequestPayload | null): HuntRequestPayload {
+  return {
+    niche: config?.niche?.trim() || DEFAULT_RESUME_CONFIG.niche,
+    pain_keyword: config?.pain_keyword?.trim() || DEFAULT_RESUME_CONFIG.pain_keyword,
+    sender_name: config?.sender_name?.trim() || DEFAULT_RESUME_CONFIG.sender_name,
+    sender_company: config?.sender_company?.trim() || DEFAULT_RESUME_CONFIG.sender_company,
+    sender_service: config?.sender_service?.trim() || DEFAULT_RESUME_CONFIG.sender_service,
   };
 }
 
@@ -235,9 +239,7 @@ export default function HuntDashboard({
         }
 
         const nextConfig = toResumeConfig(campaign);
-        if (nextConfig) {
-          setResumeConfig(nextConfig);
-        }
+        setResumeConfig(nextConfig);
       } catch {
         // Keep resume disabled when campaign config is unavailable.
       }
@@ -288,15 +290,22 @@ export default function HuntDashboard({
   }
 
   async function handleResumeHunt(): Promise<void> {
-    if (!resumeConfig || isResuming) {
+    if (isResuming) {
       return;
     }
+
+    const resumePayload = buildResumePayload(resumeConfig);
+    console.log("[HuntDashboard] Resume hunt payload", {
+      jobId,
+      storedConfig: resumeConfig,
+      payload: resumePayload,
+    });
 
     setIsResuming(true);
     setResumeError("");
 
     try {
-      const nextRun = await startHunt(resumeConfig);
+      const nextRun = await startHunt(resumePayload);
       window.dispatchEvent(
         new CustomEvent("hunt-resumed", {
           detail: {

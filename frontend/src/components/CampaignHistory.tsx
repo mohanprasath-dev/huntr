@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { getCampaignHistory } from "@/lib/huntr-api";
+import { HUNTR_API_BASE_URL, getCampaignHistory } from "@/lib/huntr-api";
 import type { CampaignComparison, CampaignSummary } from "@/lib/huntr-types";
 
 function formatTimeAgo(createdAt: string | null | undefined): string {
@@ -211,19 +211,32 @@ export default function CampaignHistory({ showViewAllLink = true }: CampaignHist
     let isMounted = true;
 
     const loadCampaigns = async (): Promise<void> => {
+      console.log("[CampaignHistory] Loading campaign history from", HUNTR_API_BASE_URL);
+
       try {
         const allCampaigns = await getCampaignHistory();
+        console.log("[CampaignHistory] getCampaignHistory response", allCampaigns);
+
         if (!isMounted) {
           return;
         }
 
-        setCampaigns(Array.isArray(allCampaigns) ? allCampaigns : []);
-        setError("");
+        const normalizedCampaigns = Array.isArray(allCampaigns) ? allCampaigns : [];
+        setCampaigns(normalizedCampaigns);
+
+        if (normalizedCampaigns.length === 0) {
+          setError(
+            `No campaigns returned from ${HUNTR_API_BASE_URL}/campaigns. Check backend Firestore logs.`,
+          );
+        } else {
+          setError("");
+        }
       } catch (loadError) {
         if (!isMounted) {
           return;
         }
 
+        console.error("[CampaignHistory] Failed to load campaign history", loadError);
         const detail =
           loadError instanceof Error ? loadError.message : "Unable to load campaign history.";
         setError(detail);
@@ -324,8 +337,14 @@ export default function CampaignHistory({ showViewAllLink = true }: CampaignHist
 
   if (recentCampaigns.length === 0) {
     return (
-      <p className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-5 text-sm text-[#6b7280]">
-        No campaigns yet. Start your first hunt above.
+      <p
+        className={`rounded-xl border bg-white px-4 py-5 text-sm ${
+          error
+            ? "border-[#fde68a] text-[#854d0e]"
+            : "border-[#e5e7eb] text-[#6b7280]"
+        }`}
+      >
+        {error || "No campaigns yet. Start your first hunt above."}
       </p>
     );
   }
