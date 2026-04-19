@@ -33,7 +33,12 @@ email_tool = BrevoEmailTool()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "https://localhost:3000",
+        "https://huntr.mohanprasath.dev",
+        "http://huntr.mohanprasath.dev",
+    ],
     allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
