@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { startHunt } from "@/lib/huntr-api";
-import type { HuntRequestPayload } from "@/lib/huntr-types";
+import { startDemoSelfCorrect, startHunt } from "@/lib/huntr-api";
+import type { DemoSelfCorrectRequestPayload, HuntRequestPayload } from "@/lib/huntr-types";
 
 const INITIAL_FORM: HuntRequestPayload = {
   niche: "AI Services",
@@ -12,6 +12,12 @@ const INITIAL_FORM: HuntRequestPayload = {
   sender_name: "Mohan Prasath",
   sender_company: "HuntR",
   sender_service: "AI outbound automation",
+};
+
+const DEMO_SELF_CORRECT_PAYLOAD: DemoSelfCorrectRequestPayload = {
+  sender_name: "Mohan Prasath",
+  sender_company: "Taskdrift",
+  sender_service: "AI automation for Indian startups",
 };
 
 interface InputFieldProps {
@@ -42,7 +48,9 @@ export default function CampaignForm() {
   const router = useRouter();
   const [form, setForm] = useState<HuntRequestPayload>(INITIAL_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDemoSubmitting, setIsDemoSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const isBusy = isSubmitting || isDemoSubmitting;
 
   const canSubmit = useMemo(
     () => Object.values(form).every((value) => value.trim().length >= 2),
@@ -55,7 +63,7 @@ export default function CampaignForm() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    if (!canSubmit || isSubmitting) {
+    if (!canSubmit || isBusy) {
       return;
     }
 
@@ -76,7 +84,27 @@ export default function CampaignForm() {
     } catch (submitError) {
       const detail = submitError instanceof Error ? submitError.message : "Failed to start campaign.";
       setError(detail);
+    } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleRunLiveDemo(): Promise<void> {
+    if (isBusy) {
+      return;
+    }
+
+    setIsDemoSubmitting(true);
+    setError("");
+
+    try {
+      const response = await startDemoSelfCorrect(DEMO_SELF_CORRECT_PAYLOAD);
+      router.push(`/hunt/${response.job_id}`);
+    } catch (submitError) {
+      const detail = submitError instanceof Error ? submitError.message : "Failed to run live demo.";
+      setError(detail);
+    } finally {
+      setIsDemoSubmitting(false);
     }
   }
 
@@ -146,13 +174,23 @@ export default function CampaignForm() {
         <p className="text-sm text-muted">
           HuntR will activate 5 autonomous agents and generate fully drafted outreach.
         </p>
-        <button
-          type="submit"
-          disabled={!canSubmit || isSubmitting}
-          className="rounded-lg border border-accent/60 bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.1)_inset,0_12px_24px_rgba(0,102,255,0.25)] transition hover:bg-[#2f7dff] disabled:cursor-not-allowed disabled:opacity-55"
-        >
-          {isSubmitting ? "Launching..." : "Start Hunting"}
-        </button>
+        <div className="flex flex-col items-end gap-2">
+          <button
+            type="submit"
+            disabled={!canSubmit || isBusy}
+            className="rounded-lg border border-accent/60 bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.1)_inset,0_12px_24px_rgba(0,102,255,0.25)] transition hover:bg-[#2f7dff] disabled:cursor-not-allowed disabled:opacity-55"
+          >
+            {isSubmitting ? "Launching..." : "Start Hunting"}
+          </button>
+          <button
+            type="button"
+            onClick={handleRunLiveDemo}
+            disabled={isBusy}
+            className="rounded-lg border border-[#2db5ff] bg-transparent px-4 py-2 text-xs font-semibold tracking-[0.08em] text-white transition hover:border-[#78d2ff] hover:bg-[#0a1f3c] disabled:cursor-not-allowed disabled:opacity-55"
+          >
+            {isDemoSubmitting ? "Starting Demo..." : "▶ Run Live Demo"}
+          </button>
+        </div>
       </div>
     </form>
   );

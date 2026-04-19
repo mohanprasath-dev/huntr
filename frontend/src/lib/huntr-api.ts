@@ -1,4 +1,6 @@
 import type {
+  DemoSelfCorrectRequestPayload,
+  DemoSelfCorrectResponse,
   HuntRequestPayload,
   HuntStartResponse,
   JobLeadsResponse,
@@ -57,6 +59,15 @@ export function getStreamUrl(jobId: string): string {
 
 export async function startHunt(payload: HuntRequestPayload): Promise<HuntStartResponse> {
   return requestJson<HuntStartResponse>("/hunt", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function startDemoSelfCorrect(
+  payload: DemoSelfCorrectRequestPayload,
+): Promise<DemoSelfCorrectResponse> {
+  return requestJson<DemoSelfCorrectResponse>("/demo/self-correct", {
     method: "POST",
     body: JSON.stringify(payload),
   });

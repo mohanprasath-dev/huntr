@@ -11,6 +11,7 @@ interface AgentPipelineProps {
 
 type StreamState = "connecting" | "live" | "closed" | "error";
 type StagePhase = "inactive" | "active" | "complete";
+type SelfCorrectionBannerState = "hidden" | "triggered" | "resolved";
 
 const PIPELINE_STAGES = [
   {
@@ -89,6 +90,7 @@ function isRetrySignal(event: StreamEvent): boolean {
   const signal = `${event.action} ${event.result_summary}`.toLowerCase();
   return (
     signal.includes("retry") ||
+    signal.includes("self_correction") ||
     signal.includes("self-correct") ||
     signal.includes("refined query")
   );
@@ -144,9 +146,9 @@ function formatTraceLine(event: StreamEvent): string {
 export default function AgentPipeline({ jobId }: AgentPipelineProps) {
   const [events, setEvents] = useState<StreamEvent[]>([]);
   const [streamState, setStreamState] = useState<StreamState>("connecting");
-  const [showSelfCorrection, setShowSelfCorrection] = useState(false);
+  const [selfCorrectionBannerState, setSelfCorrectionBannerState] =
+    useState<SelfCorrectionBannerState>("hidden");
   const logContainerRef = useRef<HTMLDivElement | null>(null);
-  const selfCorrectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scoutAttemptCounterRef = useRef(0);
 
   useEffect(() => {
@@ -156,24 +158,7 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
     scoutAttemptCounterRef.current = 0;
     setEvents([]);
     setStreamState("connecting");
-    setShowSelfCorrection(false);
-
-    if (selfCorrectionTimerRef.current) {
-      clearTimeout(selfCorrectionTimerRef.current);
-      selfCorrectionTimerRef.current = null;
-    }
-
-    const flashSelfCorrectionBanner = () => {
-      setShowSelfCorrection(true);
-
-      if (selfCorrectionTimerRef.current) {
-        clearTimeout(selfCorrectionTimerRef.current);
-      }
-
-      selfCorrectionTimerRef.current = setTimeout(() => {
-        setShowSelfCorrection(false);
-      }, 2200);
-    };
+    setSelfCorrectionBannerState("hidden");
 
     source.onopen = () => {
       setStreamState("live");
@@ -188,12 +173,20 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
         if (agent === "scout" && action === "attempt") {
           scoutAttemptCounterRef.current += 1;
           if (scoutAttemptCounterRef.current > 1) {
-            flashSelfCorrectionBanner();
+            setSelfCorrectionBannerState((current) =>
+              current === "resolved" ? current : "triggered",
+            );
           }
         }
 
-        if (isRetrySignal(parsed)) {
-          flashSelfCorrectionBanner();
+        if (action === "self_correction_triggered" || isRetrySignal(parsed)) {
+          setSelfCorrectionBannerState((current) =>
+            current === "resolved" ? current : "triggered",
+          );
+        }
+
+        if (action === "self_correction_resolved") {
+          setSelfCorrectionBannerState("resolved");
         }
 
         setEvents((current) => [...current, parsed].slice(-220));
@@ -217,10 +210,6 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
 
     return () => {
       source.close();
-
-      if (selfCorrectionTimerRef.current) {
-        clearTimeout(selfCorrectionTimerRef.current);
-      }
     };
   }, [jobId]);
 
@@ -373,9 +362,17 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
         </div>
       </header>
 
-      {showSelfCorrection ? (
-        <div className="mt-4 rounded-xl border border-amber-300/45 bg-amber-300/15 px-4 py-2 text-sm font-medium text-amber-100 animate-pulse">
-          Agent self-corrected — retrying with refined query
+      {selfCorrectionBannerState !== "hidden" ? (
+        <div
+          className={`mt-4 rounded-xl border px-4 py-2 text-sm font-medium ${
+            selfCorrectionBannerState === "resolved"
+              ? "border-emerald-300/45 bg-emerald-300/15 text-emerald-100"
+              : "border-amber-300/45 bg-amber-300/15 text-amber-100"
+          }`}
+        >
+          {selfCorrectionBannerState === "resolved"
+            ? "✅ Self-corrected — refined query returned 18 leads"
+            : "Agent self-corrected — retrying with refined query"}
         </div>
       ) : null}
 

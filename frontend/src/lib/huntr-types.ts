@@ -22,6 +22,18 @@ export interface HuntStartResponse {
   status: string;
 }
 
+export interface DemoSelfCorrectRequestPayload {
+  sender_name: string;
+  sender_company: string;
+  sender_service: string;
+}
+
+export interface DemoSelfCorrectResponse {
+  job_id: string;
+  status: string;
+  demo_mode: boolean;
+}
+
 export interface JobStatusResponse {
   job_id: string;
   status: JobStatus | string;
