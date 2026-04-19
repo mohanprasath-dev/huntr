@@ -17,6 +17,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from agents.manager import HuntRManager
+from db.campaign_store import get_campaign, list_campaigns, save_campaign
 from tools.email_tool import BrevoEmailTool
 
 load_dotenv()
@@ -65,6 +66,40 @@ def _pipeline_duration_seconds(job: dict[str, Any]) -> int:
         return max(0, int(completed_epoch - started_epoch))
 
     return 0
+
+
+def _build_impact(job: dict[str, Any], leads_qualified: int) -> dict[str, Any]:
+    leads_found = int(job.get("leads_found", 0) or 0)
+    return {
+        "time_saved_minutes": TIME_SAVED_MINUTES_BASELINE,
+        "leads_found": leads_found,
+        "leads_qualified": leads_qualified,
+        "emails_personalized": leads_qualified,
+        "manual_cost_inr": leads_qualified * MANUAL_COST_PER_QUALIFIED_LEAD_INR,
+        "pipeline_duration_seconds": _pipeline_duration_seconds(job),
+        "vs_manual": VS_MANUAL_SUMMARY,
+    }
+
+
+def _build_campaign_from_job(job_id: str, job: dict[str, Any]) -> dict[str, Any]:
+    config = dict(job.get("config", {}))
+    leads = list(job.get("leads", []))
+
+    return {
+        "job_id": job_id,
+        "config": config,
+        "status": str(job.get("status", "unknown")),
+        "leads": leads,
+        "impact": _build_impact(job=job, leads_qualified=len(leads)),
+        "trace": {
+            "events": list(job.get("events", [])),
+            "path": str(job.get("trace_path", "")),
+        },
+        "niche": str(config.get("niche", "")),
+        "pain_keyword": str(config.get("pain_keyword", "")),
+        "leads_count": len(leads),
+        "created_at": str(job.get("created_at", "")),
+    }
 
 
 def _read_trace_events(trace_path: Path) -> list[dict[str, Any]]:
@@ -311,6 +346,24 @@ def _run_hunt_job(job_id: str, config: dict[str, Any]) -> None:
         payload={},
     )
 
+    with JOBS_LOCK:
+        completed_job = JOBS.get(job_id)
+        job_snapshot = dict(completed_job) if completed_job is not None else None
+
+    if job_snapshot is not None:
+        campaign = _build_campaign_from_job(job_id=job_id, job=job_snapshot)
+        trace_payload = dict(campaign.get("trace") or {})
+        trace_payload["raw_trace_events"] = _read_trace_events(trace_path)
+
+        save_campaign(
+            job_id=job_id,
+            config=dict(campaign.get("config") or {}),
+            status=str(campaign.get("status") or "completed"),
+            leads=list(campaign.get("leads") or []),
+            impact=dict(campaign.get("impact") or {}),
+            trace=trace_payload,
+        )
+
 
 class HuntRequest(BaseModel):
     niche: str = Field(..., min_length=2)
@@ -474,21 +527,33 @@ def get_leads(job_id: str) -> JobLeadsResponse:
     job = _job_or_404(job_id)
     leads = list(job.get("leads", []))
     leads_qualified = len(leads)
-    leads_found = int(job.get("leads_found", 0) or 0)
+    impact = _build_impact(job=job, leads_qualified=leads_qualified)
 
     return JobLeadsResponse(
         job_id=job_id,
         leads=leads,
-        impact=JobLeadsResponse.Impact(
-            time_saved_minutes=TIME_SAVED_MINUTES_BASELINE,
-            leads_found=leads_found,
-            leads_qualified=leads_qualified,
-            emails_personalized=leads_qualified,
-            manual_cost_inr=leads_qualified * MANUAL_COST_PER_QUALIFIED_LEAD_INR,
-            pipeline_duration_seconds=_pipeline_duration_seconds(job),
-            vs_manual=VS_MANUAL_SUMMARY,
-        ),
+        impact=JobLeadsResponse.Impact(**impact),
     )
+
+
+@app.get("/campaigns")
+def get_campaign_history() -> list[dict[str, Any]]:
+    return list_campaigns(limit=10)
+
+
+@app.get("/campaigns/{job_id}")
+def get_campaign_by_job_id(job_id: str) -> dict[str, Any]:
+    campaign = get_campaign(job_id)
+    if campaign is not None:
+        return campaign
+
+    with JOBS_LOCK:
+        job = JOBS.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
+        job_snapshot = dict(job)
+
+    return _build_campaign_from_job(job_id=job_id, job=job_snapshot)
 
 
 @app.get("/stream/{job_id}")
