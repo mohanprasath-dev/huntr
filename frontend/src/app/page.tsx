@@ -488,6 +488,9 @@ export default function LandingPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+            <Link href="/build" className="transition hover:text-black">
+              Build Story
+            </Link>
             <a
               href="https://github.com/mohanprasath-dev/huntr"
               target="_blank"
