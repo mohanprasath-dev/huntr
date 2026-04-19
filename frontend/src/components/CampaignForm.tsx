@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { startDemoSelfCorrect, startHunt } from "@/lib/huntr-api";
@@ -26,23 +26,89 @@ interface InputFieldProps {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
+  showMic?: boolean;
+  isListening?: boolean;
+  onMicClick?: () => void;
 }
 
-function InputField({ id, label, value, onChange, placeholder }: InputFieldProps) {
+function InputField({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+  showMic = false,
+  isListening = false,
+  onMicClick,
+}: InputFieldProps) {
   return (
     <label className="block">
       <span className="text-xs uppercase tracking-[0.2em] text-muted">{label}</span>
-      <input
-        id={id}
-        name={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        className="mt-2 w-full rounded-lg border border-white/15 bg-panel-elevated px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-accent"
-      />
+      <div className="relative mt-2">
+        <input
+          id={id}
+          name={id}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={isListening ? "Listening..." : placeholder}
+          className={`w-full rounded-lg border border-white/15 bg-panel-elevated px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-accent ${
+            showMic ? "pr-11" : ""
+          } ${isListening ? "placeholder:italic placeholder:text-slate-400" : ""}`}
+        />
+        {showMic && onMicClick ? (
+          <button
+            type="button"
+            onClick={onMicClick}
+            title="Click to speak"
+            aria-label="Click to speak"
+            className={`absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded-md border p-1.5 transition-colors ${
+              isListening
+                ? "animate-pulse border-rose-300/80 bg-rose-500/20 text-rose-100"
+                : "border-white/20 bg-white/5 text-slate-200 hover:border-accent/80 hover:text-white"
+            }`}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Z" />
+              <path d="M6.25 11a.75.75 0 0 1 .75.75V12a5 5 0 1 0 10 0v-.25a.75.75 0 0 1 1.5 0V12a6.5 6.5 0 0 1-5.75 6.45V21h2a.75.75 0 0 1 0 1.5h-5.5a.75.75 0 0 1 0-1.5h2v-2.55A6.5 6.5 0 0 1 5.5 12v-.25a.75.75 0 0 1 .75-.75Z" />
+            </svg>
+          </button>
+        ) : null}
+      </div>
     </label>
   );
 }
+
+type SpeechRecognitionResultLike = {
+  transcript: string;
+};
+
+type SpeechRecognitionEventLike = {
+  results: ArrayLike<ArrayLike<SpeechRecognitionResultLike>>;
+};
+
+type SpeechRecognitionLike = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
+
+type SpeechWindow = Window & {
+  SpeechRecognition?: SpeechRecognitionCtor;
+  webkitSpeechRecognition?: SpeechRecognitionCtor;
+};
 
 export default function CampaignForm() {
   const router = useRouter();
@@ -50,6 +116,9 @@ export default function CampaignForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDemoSubmitting, setIsDemoSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [listeningField, setListeningField] = useState<keyof HuntRequestPayload | null>(null);
+  const [canUseSpeech, setCanUseSpeech] = useState(false);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const isBusy = isSubmitting || isDemoSubmitting;
 
   const canSubmit = useMemo(
@@ -59,6 +128,72 @@ export default function CampaignForm() {
 
   function updateField(field: keyof HuntRequestPayload, value: string): void {
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  useEffect(() => {
+    setCanUseSpeech(
+      typeof window !== "undefined" &&
+        ("SpeechRecognition" in window || "webkitSpeechRecognition" in window),
+    );
+
+    return () => {
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
+    };
+  }, []);
+
+  function handleSpeechInput(field: "niche" | "pain_keyword"): void {
+    if (
+      typeof window === "undefined" ||
+      !("SpeechRecognition" in window || "webkitSpeechRecognition" in window)
+    ) {
+      return;
+    }
+
+    if (listeningField === field) {
+      recognitionRef.current?.stop();
+      setListeningField(null);
+      return;
+    }
+
+    recognitionRef.current?.stop();
+
+    const speechWindow = window as SpeechWindow;
+    const Recognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
+    if (!Recognition) {
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript?.trim();
+      if (transcript) {
+        updateField(field, transcript);
+      }
+    };
+
+    recognition.onerror = () => {
+      setListeningField(null);
+    };
+
+    recognition.onend = () => {
+      setListeningField((current) => (current === field ? null : current));
+      recognitionRef.current = null;
+    };
+
+    recognitionRef.current = recognition;
+    setListeningField(field);
+
+    try {
+      recognition.start();
+    } catch {
+      setListeningField(null);
+      recognitionRef.current = null;
+    }
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
@@ -127,16 +262,22 @@ export default function CampaignForm() {
         <InputField
           id="niche"
           label="Niche"
-          value={form.niche}
+          value={listeningField === "niche" ? "" : form.niche}
           onChange={(value) => updateField("niche", value)}
           placeholder="AI services"
+          showMic={canUseSpeech}
+          isListening={listeningField === "niche"}
+          onMicClick={() => handleSpeechInput("niche")}
         />
         <InputField
           id="pain_keyword"
           label="Pain Keyword"
-          value={form.pain_keyword}
+          value={listeningField === "pain_keyword" ? "" : form.pain_keyword}
           onChange={(value) => updateField("pain_keyword", value)}
           placeholder="manual outbound bottlenecks"
+          showMic={canUseSpeech}
+          isListening={listeningField === "pain_keyword"}
+          onMicClick={() => handleSpeechInput("pain_keyword")}
         />
         <InputField
           id="sender_name"
