@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { signIn, signOut, useSession } from "next-auth/react";
 
 const AGENT_CARDS = [
   {
@@ -149,12 +150,19 @@ export default function LandingPage() {
   const heroRef = useRef<HTMLElement | null>(null);
   const cardsRef = useRef<HTMLElement | null>(null);
   const impactRef = useRef<HTMLElement | null>(null);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const { data: session } = useSession();
 
   const [navbarBlurred, setNavbarBlurred] = useState(false);
   const [heroReady, setHeroReady] = useState(false);
   const [cardsVisible, setCardsVisible] = useState(false);
   const [impactVisible, setImpactVisible] = useState(false);
   const [impactValues, setImpactValues] = useState([0, 0, 0, 0]);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+
+  const userName = session?.user?.name?.trim() || "User";
+  const userImage = session?.user?.image?.trim() || "";
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -251,6 +259,28 @@ export default function LandingPage() {
     };
   }, [impactVisible]);
 
+  useEffect(() => {
+    if (!isProfileMenuOpen) {
+      return;
+    }
+
+    const onPointerDown = (event: MouseEvent): void => {
+      const target = event.target;
+      if (
+        profileMenuRef.current &&
+        target instanceof Node &&
+        !profileMenuRef.current.contains(target)
+      ) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onPointerDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+    };
+  }, [isProfileMenuOpen]);
+
   const scrollToHowItWorks = (): void => {
     const section = document.getElementById("how-it-works");
     if (section) {
@@ -278,18 +308,71 @@ export default function LandingPage() {
             >
               Build Story
             </Link>
-            <Link
-              href="/app"
-              className="inline-flex items-center rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-gray-400 hover:text-black"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/app"
-              className="inline-flex items-center rounded-full bg-black px-5 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
-            >
-              Start for free →
-            </Link>
+            {session ? (
+              <div className="relative" ref={profileMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsProfileMenuOpen((value) => !value)}
+                  className="inline-flex items-center gap-2 rounded-full border border-gray-300 px-2.5 py-1.5 text-sm font-medium text-gray-700 transition hover:border-gray-400 hover:text-black"
+                >
+                  {userImage ? (
+                    <img src={userImage} alt={userName} className="h-8 w-8 rounded-full object-cover" />
+                  ) : (
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black text-xs font-semibold text-white">
+                      {userName.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  <span className="hidden sm:inline">{userName}</span>
+                </button>
+
+                {isProfileMenuOpen ? (
+                  <div className="absolute right-0 top-12 min-w-44 rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
+                    <Link
+                      href="/app"
+                      className="block rounded-lg px-3 py-2 text-sm font-medium text-[#111827] transition hover:bg-[#f9fafb]"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                    >
+                      Go to app
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        void signOut({ callbackUrl: "/" });
+                      }}
+                      className="mt-1 block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-[#111827] transition hover:bg-[#f9fafb]"
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void signIn("google")}
+                className="inline-flex items-center rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-gray-400 hover:text-black"
+              >
+                Sign in
+              </button>
+            )}
+
+            {session ? (
+              <Link
+                href="/app"
+                className="inline-flex items-center rounded-full bg-black px-5 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+              >
+                Go to app →
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void signIn("google")}
+                className="inline-flex items-center rounded-full bg-black px-5 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+              >
+                Start for free →
+              </button>
+            )}
           </div>
         </div>
       </header>

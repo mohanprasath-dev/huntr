@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { signOut, useSession } from "next-auth/react";
 import { HUNTR_API_BASE_URL } from "@/lib/huntr-api";
 
 function getJobIdFromPath(pathname: string): string | null {
@@ -47,10 +48,17 @@ function navLinkClass(isActive: boolean): string {
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
+  const { data: session } = useSession();
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
   const [stopError, setStopError] = useState<string | null>(null);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+
+  const userName = session?.user?.name?.trim() || "User";
+  const userEmail = session?.user?.email?.trim() || "No email";
+  const userImage = session?.user?.image?.trim() || "";
 
   const activeJobId = useMemo(() => getJobIdFromPath(pathname), [pathname]);
   const showStopButton = Boolean(activeJobId);
@@ -59,7 +67,30 @@ export default function Navbar() {
     setIsMobileOpen(false);
     setStopError(null);
     setIsStopping(false);
+    setIsProfileMenuOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!isProfileMenuOpen) {
+      return;
+    }
+
+    const onPointerDown = (event: MouseEvent): void => {
+      const target = event.target;
+      if (
+        profileMenuRef.current &&
+        target instanceof Node &&
+        !profileMenuRef.current.contains(target)
+      ) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onPointerDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+    };
+  }, [isProfileMenuOpen]);
 
   const isHome = pathname === "/app" || pathname === "/app/";
   const isCampaigns = pathname === "/app/campaigns" || pathname.startsWith("/app/campaigns/");
@@ -126,33 +157,72 @@ export default function Navbar() {
           ) : null}
         </div>
 
-        <button
-          type="button"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#e5e7eb] text-[#374151] transition hover:bg-[#f9fafb] md:hidden"
-          aria-label={isMobileOpen ? "Close navigation menu" : "Open navigation menu"}
-          aria-expanded={isMobileOpen}
-          aria-controls="mobile-primary-nav"
-          onClick={() => setIsMobileOpen((value) => !value)}
-        >
-          <span className="sr-only">Toggle menu</span>
-          <span className="relative block h-4 w-5">
-            <span
-              className={`absolute left-0 top-0 h-0.5 w-5 bg-current transition ${
-                isMobileOpen ? "translate-y-1.75 rotate-45" : ""
-              }`}
-            />
-            <span
-              className={`absolute left-0 top-1.75 h-0.5 w-5 bg-current transition ${
-                isMobileOpen ? "opacity-0" : "opacity-100"
-              }`}
-            />
-            <span
-              className={`absolute left-0 top-3.5 h-0.5 w-5 bg-current transition ${
-                isMobileOpen ? "-translate-y-1.75 -rotate-45" : ""
-              }`}
-            />
-          </span>
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="relative" ref={profileMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsProfileMenuOpen((value) => !value)}
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-[#e5e7eb] px-2.5 text-[#111827] transition hover:bg-[#f9fafb]"
+              aria-label="Toggle account menu"
+              aria-expanded={isProfileMenuOpen}
+            >
+              {userImage ? (
+                <img src={userImage} alt={userName} className="h-8 w-8 rounded-full object-cover" />
+              ) : (
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#111827] text-xs font-semibold text-white">
+                  {userName.charAt(0).toUpperCase()}
+                </span>
+              )}
+              <span className="hidden text-sm font-medium sm:inline">{userName}</span>
+            </button>
+
+            {isProfileMenuOpen ? (
+              <div className="absolute right-0 top-12 min-w-48 rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
+                <p className="px-3 py-1.5 text-sm font-medium text-[#111827]">👤 {userName}</p>
+                <p className="px-3 pb-2 text-xs text-[#6b7280]">📧 {userEmail}</p>
+                <div className="my-1 h-px bg-[#e5e7eb]" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileMenuOpen(false);
+                    void signOut({ callbackUrl: "/" });
+                  }}
+                  className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-[#111827] transition hover:bg-[#f9fafb]"
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#e5e7eb] text-[#374151] transition hover:bg-[#f9fafb] md:hidden"
+            aria-label={isMobileOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={isMobileOpen}
+            aria-controls="mobile-primary-nav"
+            onClick={() => setIsMobileOpen((value) => !value)}
+          >
+            <span className="sr-only">Toggle menu</span>
+            <span className="relative block h-4 w-5">
+              <span
+                className={`absolute left-0 top-0 h-0.5 w-5 bg-current transition ${
+                  isMobileOpen ? "translate-y-1.75 rotate-45" : ""
+                }`}
+              />
+              <span
+                className={`absolute left-0 top-1.75 h-0.5 w-5 bg-current transition ${
+                  isMobileOpen ? "opacity-0" : "opacity-100"
+                }`}
+              />
+              <span
+                className={`absolute left-0 top-3.5 h-0.5 w-5 bg-current transition ${
+                  isMobileOpen ? "-translate-y-1.75 -rotate-45" : ""
+                }`}
+              />
+            </span>
+          </button>
+        </div>
       </nav>
 
       {isMobileOpen ? (

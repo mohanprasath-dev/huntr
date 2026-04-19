@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Sora } from "next/font/google";
 import AppShell from "@/components/AppShell";
+import AuthProvider from "@/components/AuthProvider";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import "./globals.css";
 
@@ -44,8 +45,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${sora.variable} ${ibmPlexMono.variable} antialiased`}>
-        <AppShell>{children}</AppShell>
-        <FeedbackWidget />
+        <AuthProvider>
+          <AppShell>{children}</AppShell>
+          <FeedbackWidget />
+        </AuthProvider>
       </body>
     </html>
   );
