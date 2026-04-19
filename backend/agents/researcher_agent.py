@@ -192,6 +192,25 @@ class ResearcherAgent:
         "instagram.com",
         "youtube.com",
     }
+    _PAIN_SIGNAL_PATTERNS = [
+        re.compile(r"challeng\w+", re.IGNORECASE),
+        re.compile(r"struggl\w+", re.IGNORECASE),
+        re.compile(r"problem\w*", re.IGNORECASE),
+        re.compile(r"difficult\w*", re.IGNORECASE),
+        re.compile(r"bottleneck\w*", re.IGNORECASE),
+        re.compile(r"manual\w*", re.IGNORECASE),
+        re.compile(r"time.consuming", re.IGNORECASE),
+        re.compile(r"inefficien\w+", re.IGNORECASE),
+        re.compile(r"growing fast", re.IGNORECASE),
+        re.compile(r"scaling", re.IGNORECASE),
+        re.compile(r"expand\w+", re.IGNORECASE),
+        re.compile(r"hiring", re.IGNORECASE),
+        re.compile(r"automat\w+", re.IGNORECASE),
+        re.compile(r"integrat\w+", re.IGNORECASE),
+        re.compile(r"workflow\w*", re.IGNORECASE),
+        re.compile(r"pipeline\w*", re.IGNORECASE),
+        re.compile(r"process\w+", re.IGNORECASE),
+    ]
 
     def __init__(
         self,
@@ -236,12 +255,16 @@ class ResearcherAgent:
 
         size = self._infer_company_size(website_results + linkedin_results + activity_results)
         tech_stack = self._infer_tech_stack(website_results + activity_results)
-        pain_point = self._infer_pain_point(lead=lead, research_results=website_results + activity_results)
+        pain_point = self._infer_pain_point(
+            lead=lead,
+            research_results=website_results + linkedin_results + activity_results,
+        )
         decision_maker = decision_maker_name or "Founder/CEO (name unknown)"
         if not is_valid_person_name(decision_maker) or self._is_invalid_decision_maker_name(
             decision_maker
         ):
             decision_maker = "Founder/CEO (name unknown)"
+            decision_maker_title = ""
             linkedin_url = ""
         email_hint, email_hint_confidence, email_search_results = self._infer_email_hint(
             company_name=company_name,
@@ -259,7 +282,7 @@ class ResearcherAgent:
                 "tech_stack": tech_stack,
                 "pain_point": pain_point,
                 "decision_maker": decision_maker,
-                "decision_maker_title": decision_maker_title or "Unknown",
+                "decision_maker_title": decision_maker_title,
                 "email_hint": email_hint,
                 "email_hint_confidence": email_hint_confidence,
                 "linkedin_url": linkedin_url,
@@ -324,67 +347,312 @@ class ResearcherAgent:
         lead: dict[str, Any],
         research_results: list[dict[str, Any]],
     ) -> str:
-        lead_signal = str(lead.get("pain_signal") or "").strip()
-        candidate_pain = ""
-        if lead_signal:
-            candidate_pain = lead_signal[:240]
-
-        pain_markers = (
-            "manual",
-            "slow",
-            "challenge",
-            "bottleneck",
-            "struggle",
-            "pipeline",
-            "conversion",
-            "hiring",
-        )
-        if not candidate_pain:
-            for item in research_results:
-                content = str(item.get("content", "")).strip()
-                lowered = content.lower()
-                if any(marker in lowered for marker in pain_markers):
-                    candidate_pain = content[:240]
-                    break
-
-        if not candidate_pain:
-            candidate_pain = "No explicit pain point found"
-
-        if is_valid_pain_point(candidate_pain):
-            return candidate_pain
-
         company_name = str(lead.get("company_name") or lead.get("company") or "this company").strip()
         if not company_name:
             company_name = "this company"
-        return f"Likely needs AI automation for {company_name}'s workflow"
+
+        snippet_candidates: list[str] = []
+        lead_signal = str(lead.get("pain_signal") or "").strip()
+        if lead_signal:
+            snippet_candidates.append(lead_signal)
+
+        for item in research_results:
+            if not isinstance(item, dict):
+                continue
+
+            title = str(item.get("title") or "").strip()
+            snippet = str(item.get("snippet") or "").strip()
+            content = str(item.get("content") or "").strip()
+            combined = " ".join(part for part in (title, snippet, content) if part).strip()
+            if combined:
+                snippet_candidates.append(combined)
+
+        seen_snippets: set[str] = set()
+        for raw_snippet in snippet_candidates:
+            normalized_snippet = re.sub(r"\s+", " ", raw_snippet).strip()
+            if not normalized_snippet or normalized_snippet in seen_snippets:
+                continue
+            seen_snippets.add(normalized_snippet)
+
+            if not self._contains_pain_signal(normalized_snippet):
+                continue
+
+            candidate_pain = self._extract_clean_pain_point(normalized_snippet)
+            if candidate_pain and is_valid_pain_point(candidate_pain):
+                return candidate_pain
+
+        company_description = self._build_company_description(research_results)
+        industry = self._infer_industry(lead=lead, company_description=company_description)
+        generated = self._generate_specific_pain_point(
+            company_name=company_name,
+            company_description=company_description,
+            industry=industry,
+        )
+        if generated:
+            return generated
+
+        industry_label = industry or "B2B"
+        return (
+            f"As a growing {industry_label} company, {company_name} likely struggles with "
+            "manual lead qualification and fragmented follow-up workflows at scale."
+        )
+
+    def _contains_pain_signal(self, text: str) -> bool:
+        lowered_text = text.lower().strip()
+        if not lowered_text:
+            return False
+        return any(pattern.search(lowered_text) for pattern in self._PAIN_SIGNAL_PATTERNS)
+
+    def _extract_clean_pain_point(self, snippet: str) -> str:
+        normalized = re.sub(r"\s+", " ", snippet).strip()
+        if not normalized:
+            return ""
+
+        sentences = [
+            sentence.strip(" -|,.;")
+            for sentence in re.split(r"(?<=[.!?])\s+", normalized)
+            if sentence.strip()
+        ]
+        if not sentences:
+            return ""
+
+        signal_sentences = [
+            sentence for sentence in sentences if self._contains_pain_signal(sentence)
+        ]
+        selected = signal_sentences[:2] if signal_sentences else sentences[:2]
+        candidate = " ".join(selected).strip()
+        if not candidate:
+            return ""
+        if candidate[-1] not in ".!?":
+            candidate = f"{candidate}."
+        return candidate[:280]
+
+    def _build_company_description(self, research_results: list[dict[str, Any]]) -> str:
+        snippets: list[str] = []
+        for item in research_results:
+            if not isinstance(item, dict):
+                continue
+            title = str(item.get("title") or "").strip()
+            content = str(item.get("content") or item.get("snippet") or "").strip()
+            combined = " ".join(part for part in (title, content) if part).strip()
+            if combined:
+                snippets.append(combined)
+            if len(snippets) >= 3:
+                break
+        return " ".join(snippets)
+
+    def _infer_industry(self, lead: dict[str, Any], company_description: str) -> str:
+        for field in ("industry", "niche", "category"):
+            value = str(lead.get(field) or "").strip()
+            if value:
+                return value
+
+        description = company_description.lower()
+        inferred_industries = {
+            "saas": "SaaS",
+            "fintech": "fintech",
+            "health": "healthcare",
+            "ecommerce": "ecommerce",
+            "logistics": "logistics",
+            "recruit": "recruitment",
+            "education": "education",
+            "real estate": "real estate",
+            "manufacturing": "manufacturing",
+        }
+        for keyword, industry in inferred_industries.items():
+            if keyword in description:
+                return industry
+
+        return ""
+
+    def _generate_specific_pain_point(
+        self,
+        company_name: str,
+        company_description: str,
+        industry: str,
+    ) -> str:
+        if self.gemini_llm is None:
+            return ""
+
+        prompt = (
+            "Based on this company information:\n"
+            f"Company: {company_name}\n"
+            f"Description: {company_description or 'Not publicly available'}\n"
+            f"Industry: {industry or 'Unknown'}\n\n"
+            "Write ONE specific sentence describing a likely automation or sales pain point this "
+            "company faces. Be specific to their industry. Do NOT use generic phrases like \"Likely "
+            "needs AI automation\". Example: \"As a fast-growing SaaS company, COMPANY likely "
+            "struggles with manual lead qualification at scale.\""
+        )
+
+        response: Any = None
+        for method_name in ("generate_content", "generate", "invoke", "complete", "predict"):
+            method = getattr(self.gemini_llm, method_name, None)
+            if not callable(method):
+                continue
+
+            try:
+                response = method(prompt)
+                break
+            except TypeError:
+                try:
+                    response = method(contents=prompt)
+                    break
+                except Exception:
+                    continue
+            except Exception:
+                continue
+
+        if response is None and callable(self.gemini_llm):
+            try:
+                response = self.gemini_llm(prompt)
+            except Exception:
+                return ""
+
+        generated_text = self._coerce_model_text(response)
+        if not generated_text:
+            return ""
+
+        single_sentence = re.split(r"(?<=[.!?])\s+", generated_text.strip())[0].strip()
+        single_sentence = re.sub(r"\s+", " ", single_sentence)
+        if not single_sentence:
+            return ""
+        if single_sentence[-1] not in ".!?":
+            single_sentence = f"{single_sentence}."
+
+        lowered = single_sentence.lower()
+        if "likely needs ai automation" in lowered:
+            return ""
+
+        return single_sentence[:280]
+
+    def _coerce_model_text(self, response: Any) -> str:
+        if response is None:
+            return ""
+
+        if isinstance(response, str):
+            return response.strip()
+
+        text_attr = getattr(response, "text", "")
+        if isinstance(text_attr, str) and text_attr.strip():
+            return text_attr.strip()
+
+        if isinstance(response, dict):
+            for key in ("text", "content", "output"):
+                value = response.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+
+        candidates = getattr(response, "candidates", [])
+        for candidate in candidates:
+            content = getattr(candidate, "content", None)
+            parts = getattr(content, "parts", []) if content else []
+            for part in parts:
+                part_text = getattr(part, "text", "")
+                if isinstance(part_text, str) and part_text.strip():
+                    return part_text.strip()
+
+        return ""
 
     def _find_decision_maker_profile(self, company_name: str, domain: str) -> dict[str, str]:
-        if not domain:
-            return {"name": "", "title": "", "url": ""}
-
         query = f"site:linkedin.com/in {company_name} founder OR CEO OR CTO"
         results = self.serper_tool.search(query=query, num_results=5)
         if not results:
             return {"name": "", "title": "", "url": ""}
 
-        top_result = results[0] if isinstance(results[0], dict) else {}
-        raw_title = str(top_result.get("title", "")).strip()
-        raw_snippet = str(top_result.get("snippet", "")).strip()
-        raw_url = str(top_result.get("link", "")).strip()
-
-        name = self._extract_person_name(snippet=raw_snippet, title=raw_title)
-        title = self._extract_decision_maker_title(raw_title=raw_title, raw_snippet=raw_snippet)
-
+        name = ""
+        title = ""
         linkedin_url = ""
-        if "linkedin.com/in/" in raw_url:
-            linkedin_url = raw_url
+        source_title = ""
+
+        for item in results:
+            if not isinstance(item, dict):
+                continue
+
+            raw_title = str(item.get("title", "")).strip()
+            raw_snippet = str(item.get("snippet", "")).strip()
+            raw_url = str(item.get("link", "")).strip()
+            candidate_name = self._extract_person_name(snippet=raw_snippet, title=raw_title)
+            candidate_name = candidate_name.replace("View ", "").strip()
+            if not is_valid_person_name(candidate_name):
+                continue
+
+            name = candidate_name
+            source_title = raw_title
+            if "linkedin.com/in/" in raw_url:
+                linkedin_url = raw_url
+
+            combined_text = f"{raw_title} {raw_snippet}".strip()
+            title = self._extract_linkedin_title(
+                name=name,
+                company_name=company_name,
+                text=combined_text,
+            )
+            if not title:
+                title = self._extract_decision_maker_title(raw_title=raw_title, raw_snippet=raw_snippet)
+            break
+
+        if name:
+            title_query = f"site:linkedin.com/in {name} {company_name}"
+            title_results = self.serper_tool.search(query=title_query, num_results=5)
+            for item in title_results:
+                if not isinstance(item, dict):
+                    continue
+
+                raw_title = str(item.get("title", "")).strip()
+                raw_snippet = str(item.get("snippet", "")).strip()
+                raw_url = str(item.get("link", "")).strip()
+                combined_text = f"{raw_title} {raw_snippet}".strip()
+
+                extracted_title = self._extract_linkedin_title(
+                    name=name,
+                    company_name=company_name,
+                    text=combined_text,
+                )
+                if extracted_title:
+                    title = extracted_title
+
+                if not linkedin_url and "linkedin.com/in/" in raw_url:
+                    linkedin_url = raw_url
+
+                if title and linkedin_url:
+                    break
 
         return {
             "name": name,
             "title": title,
             "url": linkedin_url,
-            "source_title": raw_title,
+            "source_title": source_title,
         }
+
+    def _extract_linkedin_title(self, name: str, company_name: str, text: str) -> str:
+        normalized_text = re.sub(r"\s+", " ", text).strip()
+        if not normalized_text:
+            return ""
+
+        escaped_company = re.escape(company_name)
+        escaped_name = re.escape(name)
+        patterns = [
+            rf"·\s*(.+?)\s*(?:at|@|-)\s*{escaped_company}",
+            rf"{escaped_name}\s*[-·]\s*(.+?)\s*[-·|]",
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, normalized_text, re.IGNORECASE)
+            if not match:
+                continue
+
+            extracted = re.sub(r"\s+", " ", match.group(1)).strip(" -|,")
+            if not extracted:
+                continue
+
+            lowered = extracted.lower()
+            if lowered in {"linkedin", "profile", "view"}:
+                continue
+
+            return extracted
+
+        return ""
 
     def _infer_email_hint(
         self,

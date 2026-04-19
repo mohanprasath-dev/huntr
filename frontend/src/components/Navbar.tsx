@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -67,7 +66,6 @@ export default function Navbar() {
 
   const userName = session?.user?.name?.trim() || "User";
   const userEmail = session?.user?.email?.trim() || "No email";
-  const userImage = session?.user?.image?.trim() || "";
 
   const activeJobId = useMemo(() => getJobIdFromPath(pathname), [pathname]);
   const showStopButton =
@@ -265,30 +263,12 @@ export default function Navbar() {
               aria-label="Toggle account menu"
               aria-expanded={isProfileMenuOpen}
             >
-              {userImage ? (
-                <Image
-                  src={userImage}
-                  alt={userName}
-                  width={32}
-                  height={32}
-                  className="h-8 w-8 rounded-full object-cover"
-                />
-              ) : (
-                <span
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#111827] text-white"
-                  aria-hidden="true"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
-                    <circle cx="12" cy="8" r="3" stroke="currentColor" strokeWidth="1.8" />
-                    <path
-                      d="M6.5 18c.6-2.5 2.8-4 5.5-4s4.9 1.5 5.5 4"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </span>
-              )}
+              <span
+                className="inline-flex h-8 items-center text-[0.65rem] font-semibold uppercase tracking-widest text-[#6b7280] sm:hidden"
+                aria-hidden="true"
+              >
+                Account
+              </span>
               <span className="hidden text-sm font-medium sm:inline">{userName}</span>
             </button>
 

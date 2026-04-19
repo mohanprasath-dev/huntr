@@ -59,11 +59,24 @@ function deriveCompanySize(lead: Lead): string {
 function parseDecisionMaker(lead: Lead): { name: string; title: string } {
   const providedTitle = lead.decision_maker_title ?? lead.decisionMakerTitle;
   const raw = String(lead.decision_maker || "").trim();
+  const normalizedProvidedTitle =
+    typeof providedTitle === "string" ? providedTitle.trim() : "";
 
-  if (providedTitle && providedTitle.trim()) {
+  const isRealTitle = (value: string): boolean => {
+    const normalized = value.trim().toLowerCase();
+    return ![
+      "",
+      "unavailable",
+      "title unavailable",
+      "unknown",
+      "unknown title",
+    ].includes(normalized);
+  };
+
+  if (normalizedProvidedTitle && isRealTitle(normalizedProvidedTitle)) {
     return {
       name: raw || "Unknown Decision Maker",
-      title: providedTitle.trim(),
+      title: normalizedProvidedTitle,
     };
   }
 
@@ -71,9 +84,10 @@ function parseDecisionMaker(lead: Lead): { name: string; title: string } {
     if (raw.includes(delimiter)) {
       const [name, title] = raw.split(delimiter);
       if (name?.trim()) {
+        const normalizedTitle = title?.trim() || "";
         return {
           name: name.trim(),
-          title: title?.trim() || "Title unavailable",
+          title: isRealTitle(normalizedTitle) ? normalizedTitle : "",
         };
       }
     }
@@ -82,7 +96,7 @@ function parseDecisionMaker(lead: Lead): { name: string; title: string } {
   const cleaned = raw.replace(/\(.*?\)/g, "").trim();
   return {
     name: cleaned || raw || "Unknown Decision Maker",
-    title: "Title unavailable",
+    title: "",
   };
 }
 
@@ -528,7 +542,9 @@ export default function LeadCard({
         <section className="rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
           <p className="text-xs uppercase tracking-[0.2em] text-[#9ca3af]">Decision Maker</p>
           <p className="mt-2 text-sm font-semibold text-[#374151]">{decisionMaker.name}</p>
-          <p className="mt-1 text-sm text-[#6b7280]">{decisionMaker.title}</p>
+          {decisionMaker.title ? (
+            <p className="mt-1 text-sm text-[#6b7280]">{decisionMaker.title}</p>
+          ) : null}
 
           {linkedinUrl ? (
             <div className="mt-4">
@@ -540,7 +556,9 @@ export default function LeadCard({
                 <div className="flex items-start justify-between gap-3 pl-6">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-[#111827]">{decisionMaker.name}</p>
-                    <p className="mt-0.5 truncate text-xs text-[#6b7280]">{decisionMaker.title}</p>
+                    {decisionMaker.title ? (
+                      <p className="mt-0.5 truncate text-xs text-[#6b7280]">{decisionMaker.title}</p>
+                    ) : null}
                     <p className="mt-2 text-xs text-[#6b7280]">{String(lead.company || "Unknown Company")}</p>
                   </div>
 

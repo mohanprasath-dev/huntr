@@ -8,6 +8,75 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 
+BLOCKLIST_DOMAINS = {
+    # Job boards
+    "glassdoor.com",
+    "glassdoor.co.in",
+    "indeed.com",
+    "naukri.com",
+    "shine.com",
+    "linkedin.com",
+    "jobs.linkedin.com",
+    "wellfound.com",
+    "angel.co",
+    "f6s.com",
+    "crunchbase.com",
+    "punestartups.org",
+    "jobs.punestartups.org",
+    # News/content
+    "techcrunch.com",
+    "analyticsindiamag.com",
+    "yourstory.com",
+    "entrackr.com",
+    "economictimes.com",
+    "livemint.com",
+    "businessinsider.com",
+    "forbes.com",
+    "inc.com",
+    "entrepreneur.com",
+    # Aggregators/directories
+    "clutch.co",
+    "g2.com",
+    "capterra.com",
+    "tracxn.com",
+    "owler.com",
+    "ycombinator.com",
+    "producthunt.com",
+    # Social
+    "twitter.com",
+    "x.com",
+    "facebook.com",
+    "instagram.com",
+    "youtube.com",
+    "reddit.com",
+    "quora.com",
+}
+
+
+def _normalize_domain_from_url(url: str) -> str:
+    cleaned_url = str(url or "").strip().lower()
+    if not cleaned_url:
+        return ""
+
+    parsed = urlparse(cleaned_url)
+    domain = parsed.netloc.lower()
+    if not domain and "://" not in cleaned_url:
+        parsed = urlparse(f"https://{cleaned_url}")
+        domain = parsed.netloc.lower()
+
+    return domain.replace("www.", "").split(":")[0]
+
+
+def is_blocked_domain(url: str) -> bool:
+    try:
+        domain = _normalize_domain_from_url(url)
+        if not domain:
+            return False
+        return any(domain == blocked or domain.endswith(f".{blocked}") for blocked in BLOCKLIST_DOMAINS)
+    except Exception:
+        return False
+
+
 # Model: gemini-2.5-flash (speed-optimized)
 class ScorerAgent:
     """Lead Scorer: ranks enriched leads against a 100-point qualification rubric."""
@@ -51,23 +120,7 @@ class ScorerAgent:
         "growth",
     }
     _NON_TARGET_COMPANY_DOMAINS = {
-        "ycombinator.com",
-        "glassdoor.com",
-        "linkedin.com",
-        "indeed.com",
-        "naukri.com",
-        "angel.co",
-        "crunchbase.com",
-        "techcrunch.com",
-        "forbes.com",
-        "inc.com",
-        "facebook.com",
-        "tracxn.com",
-        "punestartups.org",
-        "jobs.punestartups.org",
-        "analyticsindiamag.com",
-        "f6s.com",
-        "wellfound.com",
+        *BLOCKLIST_DOMAINS,
         "unleashx.ai",
     }
     _INDIA_LOCATION_KEYWORDS = {
@@ -134,6 +187,32 @@ class ScorerAgent:
         self._website_status_cache: dict[str, bool] = {}
 
     def score(self, lead: dict[str, Any]) -> dict[str, Any]:
+        return self.score_lead(lead)
+
+    def score_lead(self, lead: dict[str, Any]) -> dict[str, Any]:
+        # First gate: discard known non-target domains before any scoring work.
+        lead_url = str(lead.get("url") or lead.get("website") or "").strip()
+        if not lead_url:
+            lead_domain = str(lead.get("domain") or "").strip()
+            if lead_domain:
+                lead_url = f"https://{lead_domain}"
+
+        if is_blocked_domain(lead_url):
+            scored = dict(lead)
+            scored["score"] = 0
+            scored["tier"] = "D"
+            scored["qualified"] = False
+            scored["discarded"] = True
+            scored["discard"] = True
+            scored["discard_reason"] = "Blocked domain - not a target company"
+            scored["reasoning"] = "Discarded as non-target lead (blocked domain)"
+            scored["score_breakdown"] = {
+                "base_score": self.BASE_SCORE,
+                "adjusted_score": 0,
+                "discard_reason": "Blocked domain - not a target company",
+            }
+            return scored
+
         blocklisted, blocked_domain = self._is_non_target_blocklisted(lead)
         if blocklisted:
             scored = dict(lead)
@@ -142,6 +221,7 @@ class ScorerAgent:
             scored["qualified"] = False
             scored["discarded"] = True
             scored["discard"] = True
+            scored["discard_reason"] = "Blocked domain - not a target company"
             scored["reasoning"] = (
                 f"Discarded as non-target lead (blocklisted domain match: {blocked_domain})"
             )
@@ -224,8 +304,9 @@ class ScorerAgent:
         qualified = [
             lead
             for lead in scored
-            if not bool(lead.get("discarded", False))
-            and lead.get("score", 0) >= self.MIN_QUALIFIED_SCORE
+            if bool(lead.get("qualified"))
+            and not bool(lead.get("discarded", False))
+            and not is_blocked_domain(str(lead.get("url") or lead.get("website") or ""))
         ]
         qualified.sort(key=lambda item: item.get("score", 0), reverse=True)
 
@@ -395,8 +476,12 @@ class ScorerAgent:
         company_url = str(lead.get("url") or lead.get("website") or "").strip().lower()
         searchable_text = f"{company_name} {company_url}".strip()
 
+        if is_blocked_domain(company_url):
+            blocked_domain = _normalize_domain_from_url(company_url)
+            return True, blocked_domain or "unknown"
+
         for blocked_domain in self._NON_TARGET_COMPANY_DOMAINS:
-            if domain.endswith(blocked_domain):
+            if domain == blocked_domain or domain.endswith(f".{blocked_domain}"):
                 return True, blocked_domain
             if blocked_domain in searchable_text:
                 return True, blocked_domain
