@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import FollowupTimeline from "@/components/FollowupTimeline";
-import { sendLead } from "@/lib/huntr-api";
+import { getTrackingStatus, sendLead } from "@/lib/huntr-api";
 import type { Lead } from "@/lib/huntr-types";
 
 interface LeadCardProps {
@@ -13,6 +13,9 @@ interface LeadCardProps {
   alreadySent: boolean;
   onSent: (leadId: number) => void;
 }
+
+const TRACKING_POLL_INTERVAL_MS = 5_000;
+const TRACKING_POLL_MAX_MS = 10 * 60 * 1_000;
 
 function getScoreTone(score: number): string {
   if (score >= 90) {
@@ -132,6 +135,34 @@ function deriveLeadSource(lead: Lead): "LinkedIn" | "Reddit" | "Twitter" {
   return "LinkedIn";
 }
 
+function formatOpenedAgo(openedAtIso: string, nowMs: number): string {
+  const openedMs = Date.parse(openedAtIso);
+  if (Number.isNaN(openedMs)) {
+    return "Opened just now";
+  }
+
+  const seconds = Math.max(0, Math.floor((nowMs - openedMs) / 1_000));
+  if (seconds < 60) {
+    if (seconds <= 5) {
+      return "Opened just now";
+    }
+    return `Opened ${seconds} second${seconds === 1 ? "" : "s"} ago`;
+  }
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return `Opened ${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `Opened ${hours} hour${hours === 1 ? "" : "s"} ago`;
+  }
+
+  const days = Math.floor(hours / 24);
+  return `Opened ${days} day${days === 1 ? "" : "s"} ago`;
+}
+
 export default function LeadCard({
   jobId,
   leadId,
@@ -152,6 +183,13 @@ export default function LeadCard({
   const [sendMessage, setSendMessage] = useState("");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [copyMessage, setCopyMessage] = useState("");
+  const [trackingId, setTrackingId] = useState<string | null>(null);
+  const [trackingState, setTrackingState] = useState<"idle" | "polling" | "opened" | "expired">(
+    "idle",
+  );
+  const [openedAt, setOpenedAt] = useState<string | null>(null);
+  const [openedBannerFlash, setOpenedBannerFlash] = useState(false);
+  const [openedClockTick, setOpenedClockTick] = useState(() => Date.now());
 
   useEffect(() => {
     setEmailSubject(lead.email_draft?.subject || "");
@@ -165,16 +203,110 @@ export default function LeadCard({
     }
   }, [alreadySent]);
 
+  useEffect(() => {
+    if (!trackingId || trackingState !== "polling") {
+      return;
+    }
+
+    let disposed = false;
+    let inFlight = false;
+    const startedAtMs = Date.now();
+
+    const pollTrackingStatus = async (): Promise<void> => {
+      if (disposed || inFlight) {
+        return;
+      }
+
+      if (Date.now() - startedAtMs >= TRACKING_POLL_MAX_MS) {
+        setTrackingState((current) => (current === "polling" ? "expired" : current));
+        return;
+      }
+
+      inFlight = true;
+      try {
+        const status = await getTrackingStatus(trackingId);
+        if (disposed) {
+          return;
+        }
+
+        if (status.opened) {
+          setOpenedAt(status.opened_at ?? new Date().toISOString());
+          setTrackingState("opened");
+          setOpenedBannerFlash(true);
+        }
+      } catch {
+        // Keep polling for the full window; transient errors should not break the demo flow.
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    void pollTrackingStatus();
+
+    const intervalId = window.setInterval(() => {
+      void pollTrackingStatus();
+    }, TRACKING_POLL_INTERVAL_MS);
+
+    const timeoutId = window.setTimeout(() => {
+      setTrackingState((current) => (current === "polling" ? "expired" : current));
+    }, TRACKING_POLL_MAX_MS);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [trackingId, trackingState]);
+
+  useEffect(() => {
+    if (!openedBannerFlash) {
+      return;
+    }
+
+    const timerId = window.setTimeout(() => {
+      setOpenedBannerFlash(false);
+    }, 7_000);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [openedBannerFlash]);
+
+  useEffect(() => {
+    if (trackingState !== "opened") {
+      return;
+    }
+
+    setOpenedClockTick(Date.now());
+    const timerId = window.setInterval(() => {
+      setOpenedClockTick(Date.now());
+    }, 30_000);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, [trackingState]);
+
   const scoreTone = useMemo(() => getScoreTone(Number(lead.score) || 0), [lead.score]);
   const companySize = useMemo(() => deriveCompanySize(lead), [lead]);
   const decisionMaker = useMemo(() => parseDecisionMaker(lead), [lead]);
   const painPoint = useMemo(() => derivePainPoint(lead), [lead]);
   const source = useMemo(() => deriveLeadSource(lead), [lead]);
   const emailReady = Boolean(emailSubject.trim()) && Boolean(emailBody.trim());
+  const openedRelativeTime = useMemo(() => {
+    if (!openedAt) {
+      return "";
+    }
+    return formatOpenedAgo(openedAt, openedClockTick);
+  }, [openedAt, openedClockTick]);
 
   async function handleSend(): Promise<void> {
     setSendState("sending");
     setSendMessage("");
+    setTrackingId(null);
+    setTrackingState("idle");
+    setOpenedAt(null);
+    setOpenedBannerFlash(false);
 
     try {
       const response = await sendLead(jobId, leadId, {
@@ -193,6 +325,13 @@ export default function LeadCard({
 
       setSendState("sent");
       setSendMessage(response.detail ?? `Queued with ${response.provider}.`);
+
+      const trackedId = typeof response.tracking_id === "string" ? response.tracking_id : "";
+      if (trackedId) {
+        setTrackingId(trackedId);
+        setTrackingState("polling");
+      }
+
       onSent(leadId);
     } catch (error) {
       const detail = error instanceof Error ? error.message : "Unknown send error.";
@@ -361,6 +500,23 @@ export default function LeadCard({
           <p className={`mt-3 text-sm ${sendState === "error" ? "text-rose-300" : "text-emerald-300"}`}>
             {sendMessage}
           </p>
+        ) : null}
+
+        {trackingState === "polling" ? (
+          <p className="mt-3 text-sm text-blue-200">
+            {"\uD83D\uDCE8 Email delivered \u2014 waiting for open..."}
+          </p>
+        ) : null}
+
+        {trackingState === "opened" ? (
+          <div
+            className={`mt-3 rounded-lg border border-emerald-400/55 bg-emerald-500/18 px-3 py-2 text-emerald-50 ${
+              openedBannerFlash ? "animate-pulse" : ""
+            }`}
+          >
+            <p className="text-sm font-semibold">{"\uD83C\uDF89 Email opened!"}</p>
+            <p className="mt-1 text-xs text-emerald-100">{openedRelativeTime || "Opened just now"}</p>
+          </div>
         ) : null}
 
         {copyMessage ? (

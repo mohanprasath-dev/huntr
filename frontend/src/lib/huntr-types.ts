@@ -139,6 +139,15 @@ export interface SendLeadResponse {
   status: string;
   provider: string;
   recipient: string;
+  tracking_id?: string | null;
   delivery_status?: string | null;
   detail?: string | null;
+}
+
+export interface TrackingStatusResponse {
+  tracking_id: string;
+  opened: boolean;
+  opened_at: string | null;
+  job_id: string | null;
+  lead_id: number | null;
 }

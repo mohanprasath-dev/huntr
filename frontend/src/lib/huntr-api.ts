@@ -9,6 +9,7 @@ import type {
   JobStatusResponse,
   SendLeadRequest,
   SendLeadResponse,
+  TrackingStatusResponse,
 } from "@/lib/huntr-types";
 
 const DEFAULT_API_BASE_URL = "http://localhost:8000";
@@ -116,4 +117,10 @@ export async function sendLead(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export async function getTrackingStatus(trackingId: string): Promise<TrackingStatusResponse> {
+  return requestJson<TrackingStatusResponse>(
+    `/track/${encodeURIComponent(trackingId)}/status`,
+  );
 }
