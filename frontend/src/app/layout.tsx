@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Sora } from "next/font/google";
+import Navbar from "@/components/Navbar";
 import "./globals.css";
 
 const sora = Sora({
@@ -29,7 +30,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${sora.variable} ${ibmPlexMono.variable} antialiased`}>
-        {children}
+        <Navbar />
+        <div className="pt-16">{children}</div>
       </body>
     </html>
   );
