@@ -9,35 +9,30 @@ const AGENT_CARDS = [
     name: "Scout",
     description:
       "Finds 20+ leads showing real pain signals across LinkedIn, Reddit and IndiaMART",
-    icon: "◉",
   },
   {
     id: "02",
     name: "Researcher",
     description:
       "Enriches each lead with company data, decision maker name and email",
-    icon: "◎",
   },
   {
     id: "03",
     name: "Scorer",
     description:
       "Ranks leads 1-100 based on fit, urgency and budget signals",
-    icon: "◌",
   },
   {
     id: "04",
     name: "Outreach",
     description:
       "Writes a hyper-personalized email and LinkedIn message for each lead",
-    icon: "✉",
   },
   {
     id: "05",
     name: "Followup",
     description:
       "Builds a Day 3, 7, 14 follow-up sequence automatically",
-    icon: "↺",
   },
 ];
 
@@ -65,6 +60,50 @@ function renderImpactValue(index: number, value: number): string {
     return `₹${value}`;
   }
   return `${value}+ hrs`;
+}
+
+function AgentIcon({ id }: { id: string }) {
+  if (id === "01") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4">
+        <circle cx="11" cy="11" r="6.5" />
+        <path d="M16 16l4 4" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (id === "02") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4">
+        <rect x="4" y="4" width="16" height="16" rx="2.5" />
+        <path d="M8 9h.01M12 9h.01M16 9h.01M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (id === "03") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4">
+        <path d="M5 19V9M12 19V5M19 19v-7" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (id === "04") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4">
+        <rect x="3" y="6" width="18" height="12" rx="2" />
+        <path d="M4 8l8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4">
+      <path d="M20 12a8 8 0 1 1-2.35-5.65" strokeLinecap="round" />
+      <path d="M20 5v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 export default function LandingPage() {
@@ -287,9 +326,9 @@ export default function LandingPage() {
                 </span>
 
                 <div className="relative z-10">
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-sm font-semibold text-gray-700">
-                    {card.icon}
-                  </span>
+                  <div className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-700">
+                    <AgentIcon id={card.id} />
+                  </div>
                   <h3 className="mt-4 text-lg font-semibold text-black">{card.name}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-gray-600">{card.description}</p>
                 </div>
