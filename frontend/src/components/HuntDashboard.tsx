@@ -6,7 +6,7 @@ import AgentPipeline from "@/components/AgentPipeline";
 import ImpactBar from "@/components/ImpactBar";
 import LeadCard from "@/components/LeadCard";
 import StatsBar from "@/components/StatsBar";
-import { getJobLeads, getJobStatus } from "@/lib/huntr-api";
+import { HUNTR_API_BASE_URL, getJobLeads, getJobStatus } from "@/lib/huntr-api";
 import type { JobImpact, JobStatusResponse, Lead } from "@/lib/huntr-types";
 
 interface HuntDashboardProps {
@@ -199,6 +199,8 @@ export default function HuntDashboard({
 
   const statusLabel = String(status?.status ?? (isInitialLoading ? "loading" : "unknown"));
   const activeFilterCount = Number(scoreFilter !== "all") + Number(sourceFilter !== "all");
+  const API_BASE_URL = HUNTR_API_BASE_URL;
+  const canExportCsv = status?.status === "completed" && leads.length > 0;
 
   return (
     <div className="mx-auto w-full max-w-screen-2xl px-4 pb-12 pt-8 md:px-8">
@@ -218,11 +220,31 @@ export default function HuntDashboard({
       </header>
 
       <section className="mb-6 rounded-2xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-blue-100 shadow-[0_0_0_1px_rgba(0,102,255,0.2)_inset] md:px-5">
-        <p className="font-medium">
-          <span className="font-semibold text-white">{leadsFoundCount}</span> leads found,
-          <span className="ml-1 font-semibold text-white">{aboveThresholdCount}</span> above threshold,
-          <span className="ml-1 font-semibold text-white">{readyToSendCount}</span> ready to send
-        </p>
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <p className="font-medium">
+            <span className="font-semibold text-white">{leadsFoundCount}</span> leads found,
+            <span className="ml-1 font-semibold text-white">{aboveThresholdCount}</span> above threshold,
+            <span className="ml-1 font-semibold text-white">{readyToSendCount}</span> ready to send
+          </p>
+
+          {canExportCsv ? (
+            <div className="flex items-center justify-end gap-2 md:ml-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  window.open(`${API_BASE_URL}/leads/${jobId}/export/csv`, "_blank");
+                }}
+                className="rounded px-2 py-1 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ backgroundColor: "#0066ff" }}
+              >
+                ⬇ Export CSV
+              </button>
+              <span className="text-xs text-blue-100/90">
+                Export all leads with email drafts and follow-up sequences
+              </span>
+            </div>
+          ) : null}
+        </div>
       </section>
 
       <StatsBar
