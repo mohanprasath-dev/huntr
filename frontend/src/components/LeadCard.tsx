@@ -20,15 +20,15 @@ const TRACKING_POLL_MAX_MS = 10 * 60 * 1_000;
 
 function getScoreTone(score: number): string {
   if (score >= 90) {
-    return "border-emerald-400/40 bg-emerald-500/10 text-emerald-200";
+    return "border-[#bbf7d0] bg-[#dcfce7] text-[#166534]";
   }
   if (score >= 70) {
-    return "border-accent/50 bg-accent/15 text-blue-100";
+    return "border-[#bfdbfe] bg-[#dbeafe] text-[#1d4ed8]";
   }
   if (score >= 60) {
-    return "border-amber-400/40 bg-amber-500/10 text-amber-100";
+    return "border-[#fde68a] bg-[#fef9c3] text-[#854d0e]";
   }
-  return "border-rose-400/40 bg-rose-500/10 text-rose-100";
+  return "border-[#fecaca] bg-[#fef2f2] text-[#dc2626]";
 }
 
 function deriveCompanySize(lead: Lead): string {
@@ -470,34 +470,34 @@ export default function LeadCard({
 
   return (
     <article
-      className={`lead-card-enter relative overflow-hidden rounded-2xl border border-white/10 bg-panel p-5 shadow-[0_18px_40px_rgba(0,0,0,0.35)] ${
+      className={`lead-card-enter relative overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] ${
         isPipelineStageActive ? "lead-card-active-stage" : ""
       }`}
       style={{ animationDelay: `${cardDelayMs}ms` }}
     >
       <header className="flex pr-20 sm:pr-0">
         <div className="min-w-0">
-          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.15em] text-muted">
+          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.15em] text-[#9ca3af]">
             {companyDisplay.label}
           </p>
           <h3
             className={`mt-1 text-lg ${
               companyDisplay.isSourceLike
-                ? "font-medium italic text-muted"
-                : "font-semibold text-white"
+                ? "font-medium italic text-[#6b7280]"
+                : "font-semibold text-[#111827]"
             }`}
             title={String(lead.company || "")}
           >
             {companyDisplay.displayName}
           </h3>
-          <p className="mt-1 text-sm text-muted">Size: {companySize}</p>
+          <p className="mt-1 text-sm text-[#6b7280]">Size: {companySize}</p>
         </div>
         <div
           className={`absolute right-4 top-4 flex items-center gap-3 rounded-full border px-3 py-1 sm:static sm:ml-auto ${scoreTone}`}
         >
           <div className="relative h-12 w-12">
             <svg className="h-12 w-12 -rotate-90" viewBox="0 0 48 48" aria-hidden="true">
-              <circle cx="24" cy="24" r={scoreRingRadius} fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth="4" />
+              <circle cx="24" cy="24" r={scoreRingRadius} fill="none" stroke="#d1d5db" strokeWidth="4" />
               <circle
                 cx="24"
                 cy="24"
@@ -513,33 +513,33 @@ export default function LeadCard({
                 }}
               />
             </svg>
-            <span className="absolute inset-0 grid place-items-center text-sm font-bold text-white">
+            <span className="absolute inset-0 grid place-items-center text-sm font-bold text-current">
               {animatedScore}
             </span>
           </div>
           <div className="leading-tight">
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.15em]">Score</p>
-            <p className="text-xs text-white/80">Relevance Score</p>
+            <p className="text-xs text-[#6b7280]">Relevance Score</p>
           </div>
         </div>
       </header>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <section className="rounded-xl border border-white/10 bg-white/2 p-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">Decision Maker</p>
-          <p className="mt-2 text-sm font-semibold text-white">{decisionMaker.name}</p>
-          <p className="mt-1 text-sm text-muted">{decisionMaker.title}</p>
+        <section className="rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-[#9ca3af]">Decision Maker</p>
+          <p className="mt-2 text-sm font-semibold text-[#374151]">{decisionMaker.name}</p>
+          <p className="mt-1 text-sm text-[#6b7280]">{decisionMaker.title}</p>
 
           {linkedinUrl ? (
             <div className="mt-4">
-              <article className="relative rounded-xl border border-[#0077B5] bg-[#081b2b]/80 p-3">
+              <article className="relative rounded-xl border border-[#0077B5] bg-white p-3">
                 <span className="absolute left-3 top-3 inline-grid h-4 w-4 place-items-center rounded-sm bg-[#0077B5] text-[0.6rem] font-bold leading-none text-white">
                   in
                 </span>
 
                 <div className="flex items-start justify-between gap-3 pl-6">
                   <div className="flex min-w-0 items-start gap-3">
-                    <div className="inline-grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-500/50 text-slate-200">
+                    <div className="inline-grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#e5e7eb] text-[#4b5563]">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         viewBox="0 0 24 24"
@@ -552,9 +552,9 @@ export default function LeadCard({
                     </div>
 
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-white">{decisionMaker.name}</p>
-                      <p className="mt-0.5 truncate text-xs text-slate-300">{decisionMaker.title}</p>
-                      <p className="mt-2 text-xs text-muted">{String(lead.company || "Unknown Company")}</p>
+                      <p className="truncate text-sm font-semibold text-[#111827]">{decisionMaker.name}</p>
+                      <p className="mt-0.5 truncate text-xs text-[#6b7280]">{decisionMaker.title}</p>
+                      <p className="mt-2 text-xs text-[#6b7280]">{String(lead.company || "Unknown Company")}</p>
                     </div>
                   </div>
 
@@ -562,14 +562,14 @@ export default function LeadCard({
                     href={linkedinUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="shrink-0 text-xs font-semibold text-[#66c5ff] transition-colors hover:text-[#8dd8ff]"
+                    className="shrink-0 text-xs font-semibold text-[#0077B5] transition-colors hover:text-[#005f91]"
                   >
                     View Profile →
                   </a>
                 </div>
               </article>
 
-              <p className="mt-2 inline-flex rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-emerald-200">
+              <p className="mt-2 inline-flex rounded-full border border-[#bbf7d0] bg-[#dcfce7] px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[#166534]">
                 ✓ Connect Message Ready
               </p>
             </div>
@@ -577,30 +577,30 @@ export default function LeadCard({
             <button
               type="button"
               onClick={handleSearchLinkedin}
-              className="mt-4 inline-flex items-center rounded-lg border border-[#0077B5] px-3 py-1.5 text-xs font-semibold text-[#66c5ff] transition-colors hover:bg-[#0077B5]/10 hover:text-[#8dd8ff]"
+              className="mt-4 inline-flex items-center rounded-lg border border-[#0077B5] px-3 py-1.5 text-xs font-semibold text-[#0077B5] transition-colors hover:bg-[#eff6ff] hover:text-[#005f91]"
             >
               🔍 Search on LinkedIn
             </button>
           ) : (
-            <p className="mt-4 text-xs text-muted">LinkedIn profile not found</p>
+            <p className="mt-4 text-xs text-[#9ca3af]">LinkedIn profile not found</p>
           )}
         </section>
 
-        <section className="rounded-xl border border-white/10 bg-white/2 p-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">Pain Point Detected</p>
-          <p className="mt-2 truncate text-sm text-foreground/90">{painPoint}</p>
-          <p className="mt-2 text-xs text-muted">Source: {source}</p>
+        <section className="rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-[#9ca3af]">Pain Point Detected</p>
+          <p className="mt-2 truncate text-sm text-[#6b7280]">{painPoint}</p>
+          <p className="mt-2 text-xs text-[#6b7280]">Source: {source}</p>
         </section>
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        <section className="rounded-xl border border-white/10 bg-white/2 p-4">
+        <section className="rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted">Email Draft</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#9ca3af]">Email Draft</p>
             <button
               type="button"
               onClick={() => setEmailExpanded((current) => !current)}
-              className="text-xs font-medium text-accent hover:text-blue-200"
+              className="text-xs font-medium text-accent hover:text-[#0052cc]"
             >
               {emailExpanded ? "Collapse" : "Expand"}
             </button>
@@ -609,38 +609,38 @@ export default function LeadCard({
           {emailExpanded ? (
             <div className="mt-3 space-y-3">
               <label className="block">
-                <span className="text-xs uppercase tracking-[0.15em] text-muted">Subject</span>
+                <span className="text-xs uppercase tracking-[0.15em] text-[#9ca3af]">Subject</span>
                 <input
                   type="text"
                   value={emailSubject}
                   onChange={(event) => setEmailSubject(event.target.value)}
-                  className="mt-2 w-full rounded-lg border border-white/15 bg-panel-elevated px-3 py-2 text-sm text-white outline-none transition-colors focus:border-accent"
+                  className="mt-2 w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-[#111827] outline-none transition-colors focus:border-accent"
                 />
               </label>
               <label className="block">
-                <span className="text-xs uppercase tracking-[0.15em] text-muted">Body</span>
+                <span className="text-xs uppercase tracking-[0.15em] text-[#9ca3af]">Body</span>
                 <textarea
                   value={emailBody}
                   onChange={(event) => setEmailBody(event.target.value)}
                   rows={9}
-                  className="mt-2 w-full resize-y rounded-lg border border-white/15 bg-panel-elevated px-3 py-2 text-sm leading-relaxed text-white outline-none transition-colors focus:border-accent"
+                  className="mt-2 w-full resize-y rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm leading-relaxed text-[#111827] outline-none transition-colors focus:border-accent"
                 />
               </label>
             </div>
           ) : (
-            <p className="mt-3 line-clamp-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+            <p className="mt-3 line-clamp-3 whitespace-pre-wrap text-sm leading-relaxed text-[#6b7280]">
               {emailBody || "No email draft generated."}
             </p>
           )}
         </section>
 
-        <section className="rounded-xl border border-white/10 bg-white/2 p-4">
+        <section className="rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted">LinkedIn Message</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#9ca3af]">LinkedIn Message</p>
             <button
               type="button"
               onClick={() => setLinkedinExpanded((current) => !current)}
-              className="text-xs font-medium text-accent hover:text-blue-200"
+              className="text-xs font-medium text-accent hover:text-[#0052cc]"
             >
               {linkedinExpanded ? "Collapse" : "Expand"}
             </button>
@@ -651,21 +651,21 @@ export default function LeadCard({
               value={linkedinMessage}
               onChange={(event) => setLinkedinMessage(event.target.value)}
               rows={9}
-              className="mt-3 w-full resize-y rounded-lg border border-white/15 bg-panel-elevated px-3 py-2 text-sm leading-relaxed text-white outline-none transition-colors focus:border-accent"
+              className="mt-3 w-full resize-y rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm leading-relaxed text-[#111827] outline-none transition-colors focus:border-accent"
             />
           ) : (
-            <p className="mt-3 line-clamp-4 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+            <p className="mt-3 line-clamp-4 whitespace-pre-wrap text-sm leading-relaxed text-[#6b7280]">
               {linkedinMessage || "No LinkedIn draft generated."}
             </p>
           )}
         </section>
       </div>
 
-      <div className="mt-4 rounded-xl border border-white/10 bg-white/2 p-4">
+      <div className="mt-4 rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
         <button
           type="button"
           onClick={() => setShowFollowups((current) => !current)}
-          className="text-xs font-semibold uppercase tracking-[0.16em] text-accent hover:text-blue-200"
+          className="text-xs font-semibold uppercase tracking-[0.16em] text-accent hover:text-[#0052cc]"
         >
           {showFollowups ? "Hide Follow-up Timeline" : "Show Follow-up Timeline"}
         </button>
@@ -677,16 +677,16 @@ export default function LeadCard({
         ) : null}
       </div>
 
-      <footer className="mt-4 rounded-xl border border-white/10 bg-white/2 p-4">
+      <footer className="mt-4 rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-end">
           <label className="flex-1">
-            <span className="text-xs uppercase tracking-[0.18em] text-muted">Recipient Email</span>
+            <span className="text-xs uppercase tracking-[0.18em] text-[#9ca3af]">Recipient Email</span>
             <input
               type="email"
               value={recipient}
               onChange={(event) => setRecipient(event.target.value)}
               placeholder={leadEmailHint ? undefined : "Enter decision maker's email"}
-              className="mt-2 w-full rounded-lg border border-white/15 bg-panel-elevated px-3 py-2 text-sm text-white outline-none transition-colors focus:border-accent"
+              className="mt-2 w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-[#111827] outline-none transition-colors focus:border-accent"
             />
           </label>
 
@@ -695,7 +695,7 @@ export default function LeadCard({
               type="button"
               onClick={handleSend}
               disabled={sendState === "sending" || sendState === "sent" || !emailReady}
-              className="h-11 w-full rounded-lg border border-accent/60 bg-accent px-4 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.08)_inset] transition hover:bg-[#2f7dff] disabled:cursor-not-allowed disabled:opacity-55 md:w-auto"
+              className="h-11 w-full rounded-lg border border-accent bg-accent px-4 text-sm font-semibold text-white transition hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:opacity-55 md:w-auto"
             >
               {sendState === "sending"
                 ? "Sending..."
@@ -707,7 +707,7 @@ export default function LeadCard({
             <button
               type="button"
               onClick={handleCopyLinkedin}
-              className="h-11 w-full rounded-lg border border-white/20 bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15 md:w-auto"
+              className="h-11 w-full rounded-lg border border-[#e5e7eb] bg-white px-4 text-sm font-semibold text-[#374151] transition hover:bg-[#f9fafb] md:w-auto"
             >
               Copy LinkedIn Message
             </button>
@@ -715,36 +715,36 @@ export default function LeadCard({
         </div>
 
         {sendMessage ? (
-          <p className={`mt-3 text-sm ${sendState === "error" ? "text-rose-300" : "text-emerald-300"}`}>
+          <p className={`mt-3 text-sm ${sendState === "error" ? "text-[#dc2626]" : "text-[#16a34a]"}`}>
             {sendMessage}
           </p>
         ) : null}
 
         {trackingState === "polling" ? (
-          <p className="mt-3 text-sm text-blue-200">
+          <p className="mt-3 text-sm text-[#1d4ed8]">
             {"\uD83D\uDCE8 Email delivered \u2014 waiting for open..."}
           </p>
         ) : null}
 
         {trackingState === "opened" ? (
           <div
-            className={`mt-3 rounded-lg border border-emerald-400/55 bg-emerald-500/18 px-3 py-2 text-emerald-50 ${
+            className={`mt-3 rounded-lg border border-[#bbf7d0] bg-[#f0fdf4] px-3 py-2 text-[#166534] ${
               openedBannerFlash ? "animate-pulse" : ""
             }`}
           >
             <p className="text-sm font-semibold">{"\uD83C\uDF89 Email opened!"}</p>
-            <p className="mt-1 text-xs text-emerald-100">{openedRelativeTime || "Opened just now"}</p>
+            <p className="mt-1 text-xs text-[#166534]">{openedRelativeTime || "Opened just now"}</p>
           </div>
         ) : null}
 
         {copyMessage ? (
-          <p className={`mt-2 text-sm ${copyState === "error" ? "text-rose-300" : "text-blue-200"}`}>
+          <p className={`mt-2 text-sm ${copyState === "error" ? "text-[#dc2626]" : "text-[#1d4ed8]"}`}>
             {copyMessage}
           </p>
         ) : null}
 
         {!emailReady ? (
-          <p className="mt-3 text-xs text-amber-200">
+          <p className="mt-3 text-xs text-[#d97706]">
             Draft missing subject/body. This lead cannot be sent yet.
           </p>
         ) : null}

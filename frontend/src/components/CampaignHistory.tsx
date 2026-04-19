@@ -41,15 +41,18 @@ function formatTimeAgo(createdAt: string | null | undefined): string {
 
 function statusBadgeClass(status: string): string {
   if (status === "completed") {
-    return "border-emerald-400/45 bg-emerald-500/10 text-emerald-200";
+    return "border-[#bbf7d0] bg-[#dcfce7] text-[#166534]";
   }
   if (status === "failed") {
-    return "border-rose-400/45 bg-rose-500/10 text-rose-200";
+    return "border-[#fecaca] bg-[#fef2f2] text-[#dc2626]";
   }
   if (status === "running") {
-    return "animate-pulse border-accent/45 bg-accent/20 text-blue-100";
+    return "animate-pulse border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8]";
   }
-  return "border-white/20 bg-white/5 text-white/80";
+  if (status === "stopped") {
+    return "border-[#fde68a] bg-[#fefce8] text-[#854d0e]";
+  }
+  return "border-[#e5e7eb] bg-[#f3f4f6] text-[#6b7280]";
 }
 
 function formatAvgScore(value: number | null): string {
@@ -144,48 +147,48 @@ function ComparisonPanel({
 
   return (
     <section
-      className={`rounded-xl border bg-[#0b1525] p-4 ${
-        isWinner ? "border-emerald-400/60 shadow-[0_0_0_1px_rgba(16,185,129,0.3)_inset]" : "border-white/10"
+      className={`rounded-xl border bg-white p-4 ${
+        isWinner ? "border-[#16a34a] shadow-[0_0_0_1px_rgba(22,163,74,0.2)_inset]" : "border-[#e5e7eb]"
       }`}
     >
-      <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-100">{title}</h3>
-      <div className="mt-3 space-y-2 text-sm text-white/90">
+      <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-[#111827]">{title}</h3>
+      <div className="mt-3 space-y-2 text-sm text-[#374151]">
         <p>
-          <span className="text-xs uppercase tracking-widest text-muted">Niche</span>
+          <span className="text-xs uppercase tracking-widest text-[#9ca3af]">Niche</span>
           <br />
-          <span className="font-semibold text-white">{campaign.niche || "Unknown niche"}</span>
+          <span className="font-semibold text-[#111827]">{campaign.niche || "Unknown niche"}</span>
         </p>
         <p>
-          <span className="text-xs uppercase tracking-widest text-muted">Pain keyword</span>
+          <span className="text-xs uppercase tracking-widest text-[#9ca3af]">Pain keyword</span>
           <br />
-          <span className="text-white/85">{campaign.pain_keyword || "N/A"}</span>
+          <span className="text-[#374151]">{campaign.pain_keyword || "N/A"}</span>
         </p>
         <p>
-          <span className="text-xs uppercase tracking-widest text-muted">Leads found / qualified</span>
+          <span className="text-xs uppercase tracking-widest text-[#9ca3af]">Leads found / qualified</span>
           <br />
-          <span className="font-semibold text-white">
+          <span className="font-semibold text-[#111827]">
             {leads.found} / {leads.qualified}
           </span>
         </p>
         <p>
-          <span className="text-xs uppercase tracking-widest text-muted">Qualified rate</span>
+          <span className="text-xs uppercase tracking-widest text-[#9ca3af]">Qualified rate</span>
           <br />
-          <span className="font-semibold text-white">{qualifiedRate.toFixed(1)}%</span>
+          <span className="font-semibold text-[#111827]">{qualifiedRate.toFixed(1)}%</span>
         </p>
         <p>
-          <span className="text-xs uppercase tracking-widest text-muted">Avg score</span>
+          <span className="text-xs uppercase tracking-widest text-[#9ca3af]">Avg score</span>
           <br />
-          <span className="font-semibold text-white">{formatAvgScore(avgScore)}</span>
+          <span className="font-semibold text-[#111827]">{formatAvgScore(avgScore)}</span>
         </p>
         <p>
-          <span className="text-xs uppercase tracking-widest text-muted">Emails sent</span>
+          <span className="text-xs uppercase tracking-widest text-[#9ca3af]">Emails sent</span>
           <br />
-          <span className="font-semibold text-white">{emailsSent}</span>
+          <span className="font-semibold text-[#111827]">{emailsSent}</span>
         </p>
         <p>
-          <span className="text-xs uppercase tracking-widest text-muted">Status</span>
+          <span className="text-xs uppercase tracking-widest text-[#9ca3af]">Status</span>
           <br />
-          <span className="font-semibold text-white uppercase">{status}</span>
+          <span className="font-semibold text-[#111827] uppercase">{status}</span>
         </p>
       </div>
     </section>
@@ -309,15 +312,15 @@ export default function CampaignHistory() {
   if (isLoading) {
     return (
       <div className="flex gap-3 overflow-x-auto pb-2 sm:grid sm:gap-3 sm:overflow-visible sm:pb-0">
-        <div className="h-28 w-[88%] shrink-0 animate-pulse rounded-xl border border-white/10 bg-white/3 sm:w-full sm:shrink" />
-        <div className="h-28 w-[88%] shrink-0 animate-pulse rounded-xl border border-white/10 bg-white/3 sm:w-full sm:shrink" />
+        <div className="h-28 w-[88%] shrink-0 animate-pulse rounded-xl border border-[#e5e7eb] bg-white sm:w-full sm:shrink" />
+        <div className="h-28 w-[88%] shrink-0 animate-pulse rounded-xl border border-[#e5e7eb] bg-white sm:w-full sm:shrink" />
       </div>
     );
   }
 
   if (recentCampaigns.length === 0) {
     return (
-      <p className="rounded-xl border border-white/10 bg-panel px-4 py-5 text-sm text-muted">
+      <p className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-5 text-sm text-[#6b7280]">
         No campaigns yet. Start your first hunt above.
       </p>
     );
@@ -326,7 +329,7 @@ export default function CampaignHistory() {
   return (
     <div className="space-y-3">
       {error ? (
-        <p className="rounded-xl border border-amber-400/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+        <p className="rounded-xl border border-[#fde68a] bg-[#fefce8] px-4 py-3 text-sm text-[#854d0e]">
           {error}
         </p>
       ) : null}
@@ -343,13 +346,13 @@ export default function CampaignHistory() {
               key={campaign.job_id}
               type="button"
               onClick={() => router.push(`/app/hunt/${campaign.job_id}`)}
-              className="group w-[88%] shrink-0 snap-start rounded-xl border border-white/10 bg-panel px-4 py-3 text-left transition hover:border-accent/40 hover:bg-panel-elevated sm:w-full sm:shrink"
+              className="group w-[88%] shrink-0 snap-start rounded-xl border border-[#e5e7eb] bg-white px-4 py-3 text-left transition hover:border-[#0066ff] hover:bg-[#f9fafb] sm:w-full sm:shrink"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-base font-semibold text-white">{campaign.niche || "Unknown niche"}</p>
-                  <p className="mt-1 text-sm text-muted">
-                    Pain keyword: <span className="text-white/85">{campaign.pain_keyword || "N/A"}</span>
+                  <p className="text-base font-semibold text-[#111827]">{campaign.niche || "Unknown niche"}</p>
+                  <p className="mt-1 text-sm text-[#6b7280]">
+                    Pain keyword: <span className="text-[#374151]">{campaign.pain_keyword || "N/A"}</span>
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -377,13 +380,13 @@ export default function CampaignHistory() {
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-                <p className="text-white/90">
-                  Leads found: <span className="font-semibold text-white">{leadsFound}</span>
+                <p className="text-[#374151]">
+                  Leads found: <span className="font-semibold text-[#111827]">{leadsFound}</span>
                 </p>
-                <p className="text-white/90">
-                  Qualified: <span className="font-semibold text-white">{leadsQualified}</span>
+                <p className="text-[#374151]">
+                  Qualified: <span className="font-semibold text-[#111827]">{leadsQualified}</span>
                 </p>
-                <p className="text-muted">{formatTimeAgo(campaign.created_at ?? null)}</p>
+                <p className="text-[#6b7280]">{formatTimeAgo(campaign.created_at ?? null)}</p>
               </div>
             </button>
           );
@@ -393,7 +396,7 @@ export default function CampaignHistory() {
       <div className="pt-1">
         <Link
           href="/app/campaigns"
-          className="inline-flex items-center text-sm font-semibold text-accent transition hover:text-blue-300"
+          className="inline-flex items-center text-sm font-semibold text-[#0066ff] transition hover:text-[#0052cc]"
         >
           View all →
         </Link>
@@ -403,21 +406,21 @@ export default function CampaignHistory() {
         <button
           type="button"
           onClick={() => setIsCompareOpen(true)}
-          className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 rounded-full bg-[#1e8dff] px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(30,141,255,0.45)] transition hover:bg-[#3b9dff]"
+          className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 rounded-full bg-[#0066ff] px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,102,255,0.28)] transition hover:bg-[#0052cc]"
         >
           Compare 2 Campaigns →
         </button>
       ) : null}
 
       {isCompareOpen && comparison ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#000000cc] p-4">
-          <div className="w-full max-w-5xl rounded-2xl border border-white/15 bg-[#070f1d] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.7)] md:p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#11182766] p-4">
+          <div className="w-full max-w-5xl rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-[0_24px_80px_rgba(17,24,39,0.28)] md:p-6">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold text-white md:text-2xl">Campaign Comparison</h2>
+              <h2 className="text-xl font-semibold text-[#111827] md:text-2xl">Campaign Comparison</h2>
               <button
                 type="button"
                 onClick={() => setIsCompareOpen(false)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/25 text-sm font-semibold text-white/85 transition hover:border-white/50 hover:text-white"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#e5e7eb] text-sm font-semibold text-[#6b7280] transition hover:border-[#9ca3af] hover:text-[#374151]"
                 aria-label="Close comparison"
               >
                 ✕
@@ -440,8 +443,8 @@ export default function CampaignHistory() {
             <div
               className={`mt-4 rounded-xl border px-4 py-3 text-sm font-semibold ${
                 comparison.winner === "equal"
-                  ? "border-white/20 bg-white/5 text-white"
-                  : "border-emerald-400/50 bg-emerald-500/12 text-emerald-100"
+                  ? "border-[#e5e7eb] bg-[#f9fafb] text-[#374151]"
+                  : "border-[#bbf7d0] bg-[#f0fdf4] text-[#166534]"
               }`}
             >
               {winnerBanner}

@@ -43,7 +43,7 @@ function InputField({
 }: InputFieldProps) {
   return (
     <label className="block">
-      <span className="text-xs uppercase tracking-[0.2em] text-muted">{label}</span>
+      <span className="text-xs uppercase tracking-[0.2em] text-[#374151]">{label}</span>
       <div className="relative mt-2">
         <input
           id={id}
@@ -51,9 +51,9 @@ function InputField({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={isListening ? "Listening..." : placeholder}
-          className={`w-full rounded-lg border border-white/15 bg-panel-elevated px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-accent ${
+          className={`w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2.5 text-sm text-[#111827] outline-none transition-colors focus:border-accent ${
             showMic ? "pr-11" : ""
-          } ${isListening ? "placeholder:italic placeholder:text-slate-400" : ""}`}
+          } ${isListening ? "placeholder:italic placeholder:text-[#9ca3af]" : "placeholder:text-[#9ca3af]"}`}
         />
         {showMic && onMicClick ? (
           <button
@@ -63,8 +63,8 @@ function InputField({
             aria-label="Click to speak"
             className={`absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded-md border p-1.5 transition-colors ${
               isListening
-                ? "animate-pulse border-rose-300/80 bg-rose-500/20 text-rose-100"
-                : "border-white/20 bg-white/5 text-slate-200 hover:border-accent/80 hover:text-white"
+                ? "animate-pulse border-[#fecaca] bg-[#fee2e2] text-[#dc2626]"
+                : "border-[#e5e7eb] bg-white text-[#6b7280] hover:border-accent hover:text-accent"
             }`}
           >
             <svg
@@ -246,14 +246,14 @@ export default function CampaignForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-2xl border border-white/10 bg-panel p-6 shadow-[0_30px_80px_rgba(0,0,0,0.5)]"
+      className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)]"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-accent">Campaign Setup</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">Launch a New Hunt</h2>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#111827]">Launch a New Hunt</h2>
         </div>
-        <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs uppercase tracking-[0.16em] text-blue-100">
+        <span className="rounded-full border border-[#e5e7eb] bg-[#f3f4f6] px-3 py-1 text-xs uppercase tracking-[0.16em] text-[#374151]">
           Production Mode
         </span>
       </div>
@@ -306,20 +306,20 @@ export default function CampaignForm() {
       </div>
 
       {error ? (
-        <p className="mt-4 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+        <p className="mt-4 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-sm text-[#dc2626]">
           {error}
         </p>
       ) : null}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted">
+        <p className="text-sm text-[#6b7280]">
           HuntR will activate 5 autonomous agents and generate fully drafted outreach.
         </p>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
           <button
             type="submit"
             disabled={!canSubmit || isBusy}
-            className="w-full rounded-lg border border-accent/60 bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.1)_inset,0_12px_24px_rgba(0,102,255,0.25)] transition hover:bg-[#2f7dff] disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto"
+            className="w-full rounded-lg border border-accent bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto"
           >
             {isSubmitting ? "Launching..." : "Start Hunting"}
           </button>
@@ -327,7 +327,7 @@ export default function CampaignForm() {
             type="button"
             onClick={handleRunLiveDemo}
             disabled={isBusy}
-            className="w-full rounded-lg border border-[#2db5ff] bg-transparent px-4 py-2 text-xs font-semibold tracking-[0.08em] text-white transition hover:border-[#78d2ff] hover:bg-[#0a1f3c] disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto"
+            className="w-full rounded-lg border border-accent bg-white px-4 py-2 text-xs font-semibold tracking-[0.08em] text-accent transition hover:bg-[#eff6ff] disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto"
           >
             {isDemoSubmitting ? "Starting Demo..." : "▶ Run Live Demo"}
           </button>

@@ -90,18 +90,18 @@ function matchesScoreRange(score: number, range: ScoreRangeFilter): boolean {
 
 function statusTone(status: string): string {
   if (status === "completed") {
-    return "border-emerald-400/40 bg-emerald-500/10 text-emerald-200";
+    return "border-[#bbf7d0] bg-[#dcfce7] text-[#166534]";
   }
   if (status === "failed") {
-    return "border-rose-400/40 bg-rose-500/10 text-rose-100";
+    return "border-[#fecaca] bg-[#fef2f2] text-[#dc2626]";
   }
   if (status === "stopped") {
-    return "border-amber-400/40 bg-amber-500/10 text-amber-100";
+    return "border-[#fde68a] bg-[#fefce8] text-[#854d0e]";
   }
   if (status === "running") {
-    return "border-accent/40 bg-accent/15 text-blue-100";
+    return "border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8]";
   }
-  return "border-white/20 bg-white/5 text-white/80";
+  return "border-[#e5e7eb] bg-[#f3f4f6] text-[#6b7280]";
 }
 
 function toResumeConfig(campaign: CampaignDetail): HuntRequestPayload | null {
@@ -312,14 +312,15 @@ export default function HuntDashboard({
   const showLeadSkeletons = isInitialLoading || status?.status === "running";
 
   return (
-    <div className="mx-auto w-full max-w-screen-2xl px-4 pb-12 pt-8 md:px-8">
+    <div className="min-h-screen bg-[#f9fafb]">
+      <div className="mx-auto w-full max-w-screen-2xl px-4 pb-12 pt-8 md:px-8">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-accent">Hunt Session</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white md:text-4xl">
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#111827] md:text-4xl">
             Live Leads Dashboard
           </h1>
-          <p className="mt-2 text-sm text-muted">Job ID: {jobId}</p>
+          <p className="mt-2 text-sm text-[#6b7280]">Job ID: {jobId}</p>
         </div>
         <span
           className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${statusTone(statusLabel)}`}
@@ -328,12 +329,12 @@ export default function HuntDashboard({
         </span>
       </header>
 
-      <section className="mb-6 rounded-2xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-blue-100 shadow-[0_0_0_1px_rgba(0,102,255,0.2)_inset] md:px-5">
+      <section className="mb-6 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-[#374151] shadow-[0_1px_3px_rgba(0,0,0,0.08)] md:px-5">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <p className="font-medium">
-            <span className="font-semibold text-white">{leadsFoundCount}</span> leads found,
-            <span className="ml-1 font-semibold text-white">{aboveThresholdCount}</span> above threshold,
-            <span className="ml-1 font-semibold text-white">{readyToSendCount}</span> ready to send
+            <span className="font-semibold text-[#111827]">{leadsFoundCount}</span> leads found,
+            <span className="ml-1 font-semibold text-[#111827]">{aboveThresholdCount}</span> above threshold,
+            <span className="ml-1 font-semibold text-[#111827]">{readyToSendCount}</span> ready to send
           </p>
 
           {canExportCsv ? (
@@ -348,7 +349,7 @@ export default function HuntDashboard({
               >
                 ⬇ Export CSV
               </button>
-              <span className="text-xs text-blue-100/90">
+              <span className="text-xs text-[#6b7280]">
                 Export all leads with email drafts and follow-up sequences
               </span>
             </div>
@@ -357,7 +358,7 @@ export default function HuntDashboard({
       </section>
 
       {isStoppedStatus ? (
-        <section className="mb-6 rounded-2xl border border-amber-300/45 bg-amber-300/15 px-4 py-3 text-sm text-amber-100 md:px-5">
+        <section className="mb-6 rounded-2xl border border-[#fde047] bg-[#fefce8] px-4 py-3 text-sm text-[#854d0e] md:px-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <p className="font-medium">This hunt was stopped early — showing partial results</p>
             <div className="flex flex-wrap items-center gap-2">
@@ -365,18 +366,18 @@ export default function HuntDashboard({
                 type="button"
                 onClick={handleResumeHunt}
                 disabled={isResuming || !resumeConfig}
-                className="rounded-md border border-amber-200/70 bg-amber-200/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-amber-50 transition hover:bg-amber-200/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-md border border-[#d97706] bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-[#d97706] transition hover:bg-[#fffbeb] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isResuming ? "Resuming..." : "Resume Hunt"}
               </button>
               {!resumeConfig ? (
-                <span className="text-xs text-amber-100/85">Loading previous config...</span>
+                <span className="text-xs text-[#a16207]">Loading previous config...</span>
               ) : null}
             </div>
           </div>
 
           {resumeError ? (
-            <p className="mt-2 rounded-lg border border-rose-400/35 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+            <p className="mt-2 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-xs text-[#dc2626]">
               {resumeError}
             </p>
           ) : null}
@@ -401,27 +402,27 @@ export default function HuntDashboard({
       </div>
 
       {error ? (
-        <p className="mt-6 rounded-lg border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+        <p className="mt-6 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-4 py-3 text-sm text-[#dc2626]">
           {error}
         </p>
       ) : null}
 
       <section className="mt-6 space-y-5">
-        <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-panel p-4 md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-col gap-3 rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.08)] md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-white">Qualified Leads</h2>
-            <p className="mt-1 text-sm text-muted">
+            <h2 className="text-xl font-semibold text-[#111827]">Qualified Leads</h2>
+            <p className="mt-1 text-sm text-[#6b7280]">
               Sorted by score descending. Filter by score range and source.
             </p>
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
             <label>
-              <span className="text-xs uppercase tracking-[0.16em] text-muted">Score Range</span>
+              <span className="text-xs uppercase tracking-[0.16em] text-[#6b7280]">Score Range</span>
               <select
                 value={scoreFilter}
                 onChange={(event) => setScoreFilter(event.target.value as ScoreRangeFilter)}
-                className="mt-2 h-10 rounded-lg border border-white/15 bg-panel-elevated px-3 text-sm text-white outline-none transition-colors focus:border-accent"
+                className="mt-2 h-10 rounded-lg border border-[#e5e7eb] bg-white px-3 text-sm text-[#111827] outline-none transition-colors focus:border-accent"
               >
                 <option value="all">All Scores</option>
                 <option value="90-100">90-100</option>
@@ -432,11 +433,11 @@ export default function HuntDashboard({
             </label>
 
             <label>
-              <span className="text-xs uppercase tracking-[0.16em] text-muted">Source</span>
+              <span className="text-xs uppercase tracking-[0.16em] text-[#6b7280]">Source</span>
               <select
                 value={sourceFilter}
                 onChange={(event) => setSourceFilter(event.target.value as "all" | LeadSource)}
-                className="mt-2 h-10 rounded-lg border border-white/15 bg-panel-elevated px-3 text-sm text-white outline-none transition-colors focus:border-accent"
+                className="mt-2 h-10 rounded-lg border border-[#e5e7eb] bg-white px-3 text-sm text-[#111827] outline-none transition-colors focus:border-accent"
               >
                 <option value="all">All Sources</option>
                 <option value="LinkedIn">LinkedIn</option>
@@ -452,7 +453,7 @@ export default function HuntDashboard({
                   setScoreFilter("all");
                   setSourceFilter("all");
                 }}
-                className="h-10 rounded-lg border border-white/20 bg-white/10 px-3 text-sm font-medium text-white transition hover:bg-white/15"
+                className="h-10 rounded-lg border border-[#e5e7eb] bg-white px-3 text-sm font-medium text-[#374151] transition hover:bg-[#f9fafb]"
               >
                 Reset Filters
               </button>
@@ -472,11 +473,11 @@ export default function HuntDashboard({
             ))}
           </div>
         ) : processedLeads.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-panel p-6 text-sm text-muted">
+          <div className="rounded-2xl border border-[#e5e7eb] bg-white p-6 text-sm text-[#6b7280]">
             Leads will appear here as the run progresses.
           </div>
         ) : filteredLeads.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-panel p-6 text-sm text-muted">
+          <div className="rounded-2xl border border-[#e5e7eb] bg-white p-6 text-sm text-[#6b7280]">
             No leads match the current filters.
           </div>
         ) : (
@@ -495,6 +496,7 @@ export default function HuntDashboard({
           </div>
         )}
       </section>
+      </div>
     </div>
   );
 }

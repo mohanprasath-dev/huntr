@@ -21,7 +21,7 @@ export default function LoadingSkeleton({
 
   return (
     <article
-      className="loading-skeleton-card border border-white/10 bg-[#141922] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.35)]"
+      className="loading-skeleton-card border border-[#e5e7eb] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)]"
       style={containerStyle}
       aria-hidden="true"
     >
@@ -63,9 +63,9 @@ export default function LoadingSkeleton({
         .skeleton-shimmer {
           background: linear-gradient(
             90deg,
-            rgba(55, 65, 81, 0.68) 0%,
-            rgba(131, 139, 154, 0.82) 50%,
-            rgba(55, 65, 81, 0.68) 100%
+            #f3f4f6 0%,
+            #e5e7eb 50%,
+            #f9fafb 100%
           );
           background-size: 220% 100%;
           animation: shimmer 1.45s linear infinite;

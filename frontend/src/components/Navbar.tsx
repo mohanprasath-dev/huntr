@@ -38,10 +38,10 @@ async function parseStopError(response: Response): Promise<string> {
 
 function navLinkClass(isActive: boolean): string {
   if (isActive) {
-    return "text-sm font-medium text-white";
+    return "text-sm font-semibold text-[#111827]";
   }
 
-  return "text-sm font-medium text-slate-300 transition hover:text-white";
+  return "text-sm font-medium text-[#374151] transition hover:text-[#111827]";
 }
 
 export default function Navbar() {
@@ -95,14 +95,14 @@ export default function Navbar() {
   }
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-[#1a1a1a] bg-[#0a0a0a]">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-[#e5e7eb] bg-white">
       <nav
         className="mx-auto flex h-16 w-full max-w-screen-2xl items-center justify-between px-4 md:px-8"
         aria-label="Primary"
       >
         <Link
           href="/app"
-          className="font-mono text-xl font-bold tracking-[0.2em] text-[#0066ff] transition hover:text-blue-300"
+          className="font-mono text-xl font-bold tracking-[0.2em] text-[#111827] transition hover:text-[#374151]"
         >
           HUNTR
         </Link>
@@ -119,7 +119,7 @@ export default function Navbar() {
               type="button"
               onClick={handleStopHunt}
               disabled={isStopping}
-              className="rounded-md border border-red-500 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-md border border-[#dc2626] px-3 py-1.5 text-sm font-semibold text-[#dc2626] transition hover:bg-[#fef2f2] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isStopping ? "Stopping..." : "⬛ Stop Hunt"}
             </button>
@@ -128,7 +128,7 @@ export default function Navbar() {
 
         <button
           type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-[#1a1a1a] text-slate-200 md:hidden"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-[#e5e7eb] text-[#374151] transition hover:bg-[#f9fafb] md:hidden"
           aria-label={isMobileOpen ? "Close navigation menu" : "Open navigation menu"}
           aria-expanded={isMobileOpen}
           aria-controls="mobile-primary-nav"
@@ -138,17 +138,17 @@ export default function Navbar() {
           <span className="relative block h-4 w-5">
             <span
               className={`absolute left-0 top-0 h-0.5 w-5 bg-current transition ${
-                isMobileOpen ? "translate-y-[7px] rotate-45" : ""
+                isMobileOpen ? "translate-y-1.75 rotate-45" : ""
               }`}
             />
             <span
-              className={`absolute left-0 top-[7px] h-0.5 w-5 bg-current transition ${
+              className={`absolute left-0 top-1.75 h-0.5 w-5 bg-current transition ${
                 isMobileOpen ? "opacity-0" : "opacity-100"
               }`}
             />
             <span
-              className={`absolute left-0 top-[14px] h-0.5 w-5 bg-current transition ${
-                isMobileOpen ? "-translate-y-[7px] -rotate-45" : ""
+              className={`absolute left-0 top-3.5 h-0.5 w-5 bg-current transition ${
+                isMobileOpen ? "-translate-y-1.75 -rotate-45" : ""
               }`}
             />
           </span>
@@ -156,7 +156,7 @@ export default function Navbar() {
       </nav>
 
       {isMobileOpen ? (
-        <div id="mobile-primary-nav" className="border-t border-[#1a1a1a] bg-[#0a0a0a] md:hidden">
+        <div id="mobile-primary-nav" className="border-t border-[#e5e7eb] bg-white md:hidden">
           <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 px-4 py-4">
             <Link href="/app" className={navLinkClass(isHome)} onClick={() => setIsMobileOpen(false)}>
               New Hunt
@@ -173,7 +173,7 @@ export default function Navbar() {
                 type="button"
                 onClick={handleStopHunt}
                 disabled={isStopping}
-                className="w-full rounded-md border border-red-500 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full rounded-md border border-[#dc2626] px-3 py-2 text-left text-sm font-semibold text-[#dc2626] transition hover:bg-[#fef2f2] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isStopping ? "Stopping..." : "⬛ Stop Hunt"}
               </button>
@@ -183,7 +183,7 @@ export default function Navbar() {
       ) : null}
 
       {stopError ? (
-        <div className="border-t border-[#1a1a1a] bg-[#0a0a0a] px-4 py-2 text-xs text-red-300 md:px-8">
+        <div className="border-t border-[#e5e7eb] bg-[#fff7f7] px-4 py-2 text-xs text-[#dc2626] md:px-8">
           {stopError}
         </div>
       ) : null}

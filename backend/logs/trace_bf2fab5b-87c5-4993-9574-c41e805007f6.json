@@ -1,0 +1,65 @@
+[
+  {
+    "timestamp": "2026-04-19T08:32:46.597242+00:00",
+    "run_id": "822b0332-f658-411b-a287-529051a11b3b",
+    "step": "manager:start",
+    "payload": {
+      "niche": "AI Services",
+      "pain_keyword": "manual outbound bottlenecks",
+      "max_leads": 20
+    }
+  },
+  {
+    "timestamp": "2026-04-19T08:32:54.949055+00:00",
+    "run_id": "822b0332-f658-411b-a287-529051a11b3b",
+    "step": "scout:attempt",
+    "payload": {
+      "attempt": 1,
+      "query": "AI Services manual outbound bottlenecks outbound bottleneck",
+      "found": 11,
+      "total_unique": 11
+    }
+  },
+  {
+    "timestamp": "2026-04-19T08:33:00.174747+00:00",
+    "run_id": "822b0332-f658-411b-a287-529051a11b3b",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 1,
+      "company": "Linkedin",
+      "domain": "linkedin.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T08:33:05.007917+00:00",
+    "run_id": "822b0332-f658-411b-a287-529051a11b3b",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 2,
+      "company": "Instagram",
+      "domain": "instagram.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T08:33:10.534054+00:00",
+    "run_id": "822b0332-f658-411b-a287-529051a11b3b",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 3,
+      "company": "Forbes",
+      "domain": "forbes.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T08:33:10.534909+00:00",
+    "run_id": "822b0332-f658-411b-a287-529051a11b3b",
+    "step": "manager:hunt_stopped",
+    "payload": {
+      "result_summary": "Hunt stopped by user after 4 steps",
+      "steps_completed": 4
+    },
+    "agent": "manager",
+    "action": "hunt_stopped",
+    "result_summary": "Hunt stopped by user after 4 steps"
+  }
+]

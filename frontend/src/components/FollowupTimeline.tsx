@@ -20,8 +20,8 @@ export default function FollowupTimeline({ sequence }: FollowupTimelineProps) {
   }
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/2 p-4">
-      <p className="text-xs uppercase tracking-[0.2em] text-muted">Follow-up Sequence</p>
+    <div className="rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
+      <p className="text-xs uppercase tracking-[0.2em] text-[#9ca3af]">Follow-up Sequence</p>
       <div className="mt-3 grid gap-3 md:grid-cols-3">
         {DEFAULT_DAYS.map((day) => {
           const item = byDay.get(day);
@@ -29,16 +29,16 @@ export default function FollowupTimeline({ sequence }: FollowupTimelineProps) {
           return (
             <article
               key={day}
-              className="rounded-lg border border-white/10 bg-panel-elevated px-3 py-3"
+              className="rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-3 py-3"
             >
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
                 Day {day}
               </p>
-              <p className="mt-2 text-xs text-muted">
+              <p className="mt-2 text-xs text-[#6b7280]">
                 {item?.subject ? trimMessage(item.subject, 70) : "Planned touchpoint ready after first contact."}
               </p>
               {item?.message ? (
-                <p className="mt-2 text-sm leading-relaxed text-foreground/90">
+                <p className="mt-2 text-sm leading-relaxed text-[#374151]">
                   {trimMessage(item.message.replace(/\s+/g, " ").trim(), 120)}
                 </p>
               ) : null}

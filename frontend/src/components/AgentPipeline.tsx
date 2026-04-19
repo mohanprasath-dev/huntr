@@ -99,28 +99,28 @@ function isRetrySignal(event: StreamEvent): boolean {
 
 function stageTone(phase: StagePhase): string {
   if (phase === "complete") {
-    return "border-emerald-400/45 bg-emerald-500/12 shadow-[0_0_22px_rgba(16,185,129,0.24)]";
+    return "border-[#16a34a] bg-white shadow-[0_1px_3px_rgba(22,163,74,0.16)]";
   }
   if (phase === "cancelled") {
-    return "border-white/14 bg-white/4 opacity-65";
+    return "border-[#e5e7eb] bg-[#f9fafb]";
   }
   if (phase === "active") {
-    return "border-accent/70 bg-accent/15 shadow-[0_0_0_1px_rgba(0,102,255,0.45)_inset,0_0_30px_rgba(0,102,255,0.55)] animate-pulse";
+    return "border-[#0066ff] bg-white shadow-[0_0_0_1px_rgba(0,102,255,0.2)_inset,0_0_22px_rgba(0,102,255,0.22)]";
   }
-  return "border-white/12 bg-white/5 opacity-55";
+  return "border-[#e5e7eb] bg-[#f9fafb]";
 }
 
 function streamStateTone(state: SseStatus): string {
   if (state === "running" || state === "connected") {
-    return "border-emerald-400/40 bg-emerald-500/10 text-emerald-200";
+    return "border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8]";
   }
   if (state === "error") {
-    return "border-rose-400/40 bg-rose-500/10 text-rose-100";
+    return "border-[#fecaca] bg-[#fef2f2] text-[#dc2626]";
   }
   if (state === "closed") {
-    return "border-white/20 bg-white/5 text-white/80";
+    return "border-[#e5e7eb] bg-[#f3f4f6] text-[#6b7280]";
   }
-  return "border-accent/40 bg-accent/15 text-blue-100";
+  return "border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8]";
 }
 
 function stateLabel(state: SseStatus): string {
@@ -411,11 +411,11 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
   const terminalEvents = useMemo(() => events.slice(-180), [events]);
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-panel p-5 shadow-[0_20px_48px_rgba(0,0,0,0.45)]">
+    <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-white">Live Agent Pipeline</h2>
-          <p className="mt-1 text-sm text-muted">
+          <h2 className="text-lg font-semibold text-[#111827]">Live Agent Pipeline</h2>
+          <p className="mt-1 text-sm text-[#6b7280]">
             Real-time orchestration stream for job {jobId}
           </p>
         </div>
@@ -425,17 +425,17 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
               type="button"
               onClick={handleStop}
               disabled={isStopping}
-              className="rounded-md border border-red-500 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-md border border-[#dc2626] px-3 py-1.5 text-sm font-semibold text-[#dc2626] transition hover:bg-[#fef2f2] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isStopping ? "Stopping..." : "⬛ Stop"}
             </button>
           ) : null}
 
-          <div className="rounded-xl border border-accent/45 bg-[#07112a] px-4 py-2 text-right shadow-[0_0_24px_rgba(0,102,255,0.2)]">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-200/80">
+          <div className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-2 text-right shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
               Total Leads Found
             </p>
-            <p className="font-mono text-2xl font-semibold text-white">{totalLeadsFound}</p>
+            <p className="font-mono text-2xl font-semibold text-[#0066ff]">{totalLeadsFound}</p>
           </div>
           <span
             className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${streamStateTone(sseStatus)}`}
@@ -446,13 +446,13 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
       </header>
 
       {stopError ? (
-        <p className="mt-3 rounded-lg border border-rose-400/35 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+        <p className="mt-3 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-sm text-[#dc2626]">
           {stopError}
         </p>
       ) : null}
 
       {isStoppedRun ? (
-        <div className="mt-4 rounded-xl border border-amber-300/45 bg-amber-300/15 px-4 py-2 text-sm font-medium text-amber-100">
+        <div className="mt-4 rounded-xl border border-[#fde047] bg-[#fefce8] px-4 py-2 text-sm font-medium text-[#854d0e]">
           Hunt stopped — partial results available below
         </div>
       ) : null}
@@ -461,8 +461,8 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
         <div
           className={`mt-4 rounded-xl border px-4 py-2 text-sm font-medium ${
             selfCorrectionBannerState === "resolved"
-              ? "border-emerald-300/45 bg-emerald-300/15 text-emerald-100"
-              : "border-amber-300/45 bg-amber-300/15 text-amber-100"
+              ? "border-[#bbf7d0] bg-[#f0fdf4] text-[#166534]"
+              : "border-[#fde047] bg-[#fefce8] text-[#854d0e]"
           }`}
         >
           {selfCorrectionBannerState === "resolved"
@@ -501,36 +501,60 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
                   className={`relative w-full rounded-xl border p-4 transition-all duration-300 sm:w-55 ${stageTone(phase)}`}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <p className="text-base font-semibold text-white">
+                    <p
+                      className={`text-base font-semibold ${
+                        phase === "complete"
+                          ? "text-[#166534]"
+                          : phase === "active"
+                            ? "text-[#0066ff]"
+                            : "text-[#9ca3af]"
+                      }`}
+                    >
                       <span className="mr-2">{stage.emoji}</span>
                       {stage.title}
                     </p>
                     {stageData.retried ? (
-                      <span className="rounded-full border border-amber-300/45 bg-amber-400/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-100">
+                      <span className="rounded-full border border-[#f59e0b] bg-[#fff7ed] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b45309]">
                         Retried
                       </span>
                     ) : null}
                   </div>
 
-                  <p className="mt-2 text-xs leading-relaxed text-muted">{stage.detail}</p>
+                  <p
+                    className={`mt-2 text-xs leading-relaxed ${
+                      phase === "complete" ? "text-[#166534]" : "text-[#9ca3af]"
+                    }`}
+                  >
+                    {stage.detail}
+                  </p>
 
-                  <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3 text-xs">
+                  <div className="mt-4 flex items-center justify-between border-t border-[#e5e7eb] pt-3 text-xs">
                     {phase === "complete" ? (
-                      <span className="font-semibold text-emerald-200">✓ Complete</span>
+                      <span className="font-semibold text-[#166534]">✓ Complete</span>
                     ) : phase === "active" ? (
-                      <span className="font-semibold text-blue-100">Running...</span>
+                      <span className="font-semibold text-[#0066ff]">Running...</span>
                     ) : phase === "cancelled" ? (
-                      <span className="font-semibold text-white/55">Cancelled</span>
+                      <span className="font-semibold text-[#9ca3af]">Cancelled</span>
                     ) : (
-                      <span className="text-white/50">Waiting</span>
+                      <span className="text-[#9ca3af]">Waiting</span>
                     )}
 
-                    <span className="font-mono text-[11px] text-white/75">{stageData.processed} leads</span>
+                    <span
+                      className={`font-mono text-[11px] ${
+                        phase === "complete"
+                          ? "text-[#166534]"
+                          : phase === "active"
+                            ? "text-[#0066ff]"
+                            : "text-[#9ca3af]"
+                      }`}
+                    >
+                      {stageData.processed} leads
+                    </span>
                   </div>
                 </article>
 
                 {index < PIPELINE_STAGES.length - 1 ? (
-                  <div className="flex items-center justify-center py-1 text-xl text-accent/65 sm:px-1 sm:py-0">
+                  <div className="flex items-center justify-center py-1 text-xl text-[#0066ff] sm:px-1 sm:py-0">
                     <span className="sm:hidden">↓</span>
                     <span className="hidden sm:inline">→</span>
                   </div>
@@ -541,27 +565,27 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
         </div>
       </div>
 
-      <div className="mt-5 rounded-xl border border-white/10 bg-[#070d1a] p-4">
+      <div className="mt-5 rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">Live Agent Log</p>
         <div
           ref={logContainerRef}
-          className="mt-3 h-64 overflow-y-auto rounded-lg border border-white/10 bg-black/35 p-3 font-mono text-xs"
+          className="mt-3 h-64 overflow-y-auto rounded-lg border border-[#374151] bg-[#111827] p-3 font-mono text-xs"
         >
           {terminalEvents.length > 0 ? (
             terminalEvents.map((event, index) => (
               <p
                 key={`${event.timestamp}-${event.agent}-${event.action}-${index}`}
-                className="mb-1.5 flex gap-2 leading-relaxed text-blue-100/90"
+                className="mb-1.5 flex gap-2 leading-relaxed text-[#e5e7eb]"
               >
-                <span className="text-emerald-300">$</span>
+                <span className="text-[#22c55e]">$</span>
                 <span className="wrap-break-word">{formatTraceLine(event)}</span>
               </p>
             ))
           ) : (
-            <p className="text-blue-100/50">$ waiting for agent telemetry...</p>
+            <p className="text-[#9ca3af]">$ waiting for agent telemetry...</p>
           )}
 
-          <p className="mt-2 flex items-center gap-2 text-emerald-200/85">
+          <p className="mt-2 flex items-center gap-2 text-[#bbf7d0]">
             <span>hunt@pipeline</span>
             <span className="inline-block h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
           </p>
