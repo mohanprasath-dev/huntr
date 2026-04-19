@@ -19,10 +19,19 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
-from job_state import JOBS, JOBS_LOCK
 
 from agents.manager import HuntRManager
-from db.campaign_store import get_campaign, list_campaigns, save_campaign
+from db.campaign_store import (
+    append_job_event,
+    create_job,
+    get_campaign,
+    get_job,
+    get_job_events,
+    list_campaigns,
+    save_campaign,
+    set_job_stop,
+    update_job,
+)
 from db.firestore_client import CAMPAIGNS_COLLECTION, db, test_firestore_connection
 from tools.email_tool import BrevoEmailTool
 
@@ -96,6 +105,18 @@ def _pipeline_duration_seconds(job: dict[str, Any]) -> int:
     if isinstance(started_epoch, (int, float)) and isinstance(completed_epoch, (int, float)):
         return max(0, int(completed_epoch - started_epoch))
 
+    started_at_raw = str(job.get("started_at") or "").strip()
+    completed_at_raw = str(job.get("completed_at") or "").strip()
+    if started_at_raw and completed_at_raw:
+        started_at_value = started_at_raw.replace("Z", "+00:00")
+        completed_at_value = completed_at_raw.replace("Z", "+00:00")
+        try:
+            started_at = datetime.fromisoformat(started_at_value)
+            completed_at = datetime.fromisoformat(completed_at_value)
+            return max(0, int((completed_at - started_at).total_seconds()))
+        except ValueError:
+            return 0
+
     return 0
 
 
@@ -112,9 +133,23 @@ def _build_impact(job: dict[str, Any], leads_qualified: int) -> dict[str, Any]:
     }
 
 
+def _impact_with_defaults(
+    job: dict[str, Any],
+    leads_qualified: int,
+    candidate: Any,
+) -> dict[str, Any]:
+    impact = _build_impact(job=job, leads_qualified=leads_qualified)
+    if isinstance(candidate, dict):
+        for key in impact:
+            value = candidate.get(key)
+            if value is not None:
+                impact[key] = value
+    return impact
+
+
 def _build_campaign_from_job(job_id: str, job: dict[str, Any]) -> dict[str, Any]:
     config = dict(job.get("config", {}))
-    leads = list(job.get("leads", []))
+    leads = list(job.get("result_leads") or job.get("leads") or [])
 
     return {
         "job_id": job_id,
@@ -147,12 +182,13 @@ def _read_trace_events(trace_path: Path) -> list[dict[str, Any]]:
     return []
 
 
-def _job_or_404(job_id: str) -> dict[str, Any]:
-    with JOBS_LOCK:
-        job = JOBS.get(job_id)
-        if job is None:
-            raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
-        return dict(job)
+def _job_leads(job: dict[str, Any]) -> list[dict[str, Any]]:
+    leads = job.get("result_leads")
+    if not isinstance(leads, list):
+        leads = job.get("leads")
+    if not isinstance(leads, list):
+        return []
+    return [lead for lead in leads if isinstance(lead, dict)]
 
 
 def _text(value: Any) -> str:
@@ -218,16 +254,11 @@ def _get_leads_from_store(job_id: str) -> list[dict[str, Any]]:
         if isinstance(campaign_leads, list):
             return [lead for lead in campaign_leads if isinstance(lead, dict)]
 
-    with JOBS_LOCK:
-        job = JOBS.get(job_id)
-        if job is None:
-            raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
-        leads = job.get("leads")
+    job = get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
 
-    if not isinstance(leads, list):
-        return []
-
-    return [lead for lead in leads if isinstance(lead, dict)]
+    return _job_leads(job)
 
 
 def _build_result_summary(agent: str, action: str, payload: Any) -> str:
@@ -274,37 +305,42 @@ def _record_step(
     timestamp: str,
     payload: dict[str, Any] | None = None,
 ) -> None:
-    with JOBS_LOCK:
-        job = JOBS.get(job_id)
-        if job is None:
-            return
+    job = get_job(job_id)
+    if not job:
+        return
 
-        safe_payload = payload or {}
-        if agent == "scout":
-            total_unique = _to_int(safe_payload.get("total_unique"))
-            found = _to_int(safe_payload.get("found"))
-            if total_unique is not None:
-                job["leads_found"] = max(int(job.get("leads_found", 0)), total_unique)
-            elif found is not None:
-                job["leads_found"] = max(int(job.get("leads_found", 0)), found)
+    safe_payload = payload or {}
+    updates: dict[str, Any] = {"current_agent": agent}
 
-        if agent == "scorer":
-            scored = _to_int(safe_payload.get("scored"))
-            lead_index = _to_int(safe_payload.get("lead_index"))
-            if scored is not None:
-                job["leads_scored"] = max(int(job.get("leads_scored", 0)), scored)
-            elif lead_index is not None and action == "score":
-                job["leads_scored"] = max(int(job.get("leads_scored", 0)), lead_index)
+    if agent == "scout":
+        total_unique = _to_int(safe_payload.get("total_unique"))
+        found = _to_int(safe_payload.get("found"))
+        existing_found = int(job.get("leads_found", 0) or 0)
+        if total_unique is not None:
+            updates["leads_found"] = max(existing_found, total_unique)
+        elif found is not None:
+            updates["leads_found"] = max(existing_found, found)
 
-        job["current_agent"] = agent
-        event = {
-            "agent": agent,
-            "action": action,
-            "result_summary": result_summary,
-            "timestamp": timestamp,
-        }
-        job.setdefault("events", []).append(event)
-        job["steps_completed"] = len(job.get("events", []))
+    if agent == "scorer":
+        scored = _to_int(safe_payload.get("scored"))
+        lead_index = _to_int(safe_payload.get("lead_index"))
+        existing_scored = int(job.get("leads_scored", 0) or 0)
+        if scored is not None:
+            updates["leads_scored"] = max(existing_scored, scored)
+        elif lead_index is not None and action == "score":
+            updates["leads_scored"] = max(existing_scored, lead_index)
+
+    current_steps = int(job.get("steps_completed", 0) or 0)
+    updates["steps_completed"] = current_steps + 1
+    update_job(job_id, updates)
+
+    event = {
+        "agent": agent,
+        "action": action,
+        "result_summary": result_summary,
+        "timestamp": timestamp,
+    }
+    append_job_event(job_id, event)
 
 
 def _ingest_trace_events(job_id: str, trace_path: Path, cursor: int) -> int:
@@ -356,22 +392,29 @@ def _format_leads(leads: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def _run_hunt_job(job_id: str, config: dict[str, Any]) -> None:
     trace_path = Path(__file__).resolve().parent / "logs" / f"trace_{job_id}.json"
 
-    with JOBS_LOCK:
-        job = JOBS.get(job_id)
-        if job is None:
-            return
-        job["status"] = "running"
-        job["current_agent"] = "manager"
-        job["trace_path"] = str(trace_path)
+    if not get_job(job_id):
+        return
+
+    update_job(
+        job_id,
+        {
+            "status": "running",
+            "current_agent": "manager",
+            "trace_path": str(trace_path),
+        },
+    )
 
     try:
         manager = HuntRManager(trace_path=trace_path)
     except Exception as exc:  # pragma: no cover - environment/bootstrap sensitive path
-        with JOBS_LOCK:
-            job = JOBS.get(job_id)
-            if job is not None:
-                job["status"] = "failed"
-                job["error"] = str(exc)
+        update_job(
+            job_id,
+            {
+                "status": "failed",
+                "current_agent": "manager",
+                "error": str(exc),
+            },
+        )
         _record_step(
             job_id=job_id,
             agent="manager",
@@ -404,15 +447,22 @@ def _run_hunt_job(job_id: str, config: dict[str, Any]) -> None:
 
     if error_box:
         final_status = "failed"
-        with JOBS_LOCK:
-            job = JOBS.get(job_id)
-            if job is not None:
-                if str(job.get("status", "")).lower() == "stopped" or bool(
-                    job.get("stop_requested", False)
-                ):
-                    final_status = "stopped"
-                job["status"] = final_status
-                job["error"] = error_box["error"]
+        job = get_job(job_id)
+        if job and (
+            str(job.get("status", "")).lower() == "stopped"
+            or bool(job.get("stop_requested", False))
+        ):
+            final_status = "stopped"
+
+        update_job(
+            job_id,
+            {
+                "status": final_status,
+                "current_agent": "manager",
+                "error": error_box["error"],
+                "completed_at": _now_iso(),
+            },
+        )
 
         if final_status == "stopped":
             _record_step(
@@ -440,30 +490,39 @@ def _run_hunt_job(job_id: str, config: dict[str, Any]) -> None:
     completed_at_epoch = time.time()
     final_status = "completed"
 
-    with JOBS_LOCK:
-        job = JOBS.get(job_id)
-        if job is None:
-            return
+    job = get_job(job_id)
+    if not job:
+        return
 
-        if str(job.get("status", "")).lower() == "stopped" or bool(job.get("stop_requested", False)):
-            final_status = "stopped"
+    if str(job.get("status", "")).lower() == "stopped" or bool(job.get("stop_requested", False)):
+        final_status = "stopped"
 
-        job["status"] = final_status
-        job["raw_leads"] = raw_leads
-        job["leads"] = formatted
-        job["completed_at"] = completed_at_iso
-        job["completed_at_epoch"] = completed_at_epoch
+    started_at_epoch = job.get("started_at_epoch")
+    if isinstance(started_at_epoch, (int, float)):
+        pipeline_duration_seconds = max(0, int(completed_at_epoch - started_at_epoch))
+    else:
+        pipeline_duration_seconds = 0
 
-        started_at_epoch = job.get("started_at_epoch")
-        if isinstance(started_at_epoch, (int, float)):
-            job["pipeline_duration_seconds"] = max(0, int(completed_at_epoch - started_at_epoch))
-        else:
-            job["pipeline_duration_seconds"] = 0
+    updates: dict[str, Any] = {
+        "status": final_status,
+        "current_agent": "manager",
+        "raw_leads": raw_leads,
+        "result_leads": formatted,
+        "leads": formatted,
+        "completed_at": completed_at_iso,
+        "completed_at_epoch": completed_at_epoch,
+        "pipeline_duration_seconds": pipeline_duration_seconds,
+    }
 
-        if int(job.get("leads_found", 0)) == 0:
-            job["leads_found"] = len(raw_leads)
-        if int(job.get("leads_scored", 0)) == 0:
-            job["leads_scored"] = len(raw_leads)
+    if int(job.get("leads_found", 0) or 0) == 0:
+        updates["leads_found"] = len(raw_leads)
+    if int(job.get("leads_scored", 0) or 0) == 0:
+        updates["leads_scored"] = len(raw_leads)
+
+    job_for_impact = dict(job)
+    job_for_impact.update(updates)
+    updates["impact"] = _build_impact(job=job_for_impact, leads_qualified=len(formatted))
+    update_job(job_id, updates)
 
     if final_status == "stopped":
         _record_step(
@@ -484,9 +543,8 @@ def _run_hunt_job(job_id: str, config: dict[str, Any]) -> None:
             payload={},
         )
 
-    with JOBS_LOCK:
-        completed_job = JOBS.get(job_id)
-        job_snapshot = dict(completed_job) if completed_job is not None else None
+    completed_job = get_job(job_id)
+    job_snapshot = dict(completed_job) if completed_job is not None else None
 
     if job_snapshot is not None:
         campaign = _build_campaign_from_job(job_id=job_id, job=job_snapshot)
@@ -504,7 +562,7 @@ def _run_hunt_job(job_id: str, config: dict[str, Any]) -> None:
             save_campaign(
                 job_id=job_id,
                 config=config,
-                status="completed",
+                status=str(campaign.get("status") or final_status),
                 leads=leads,
                 impact=impact,
                 trace=trace,
@@ -619,6 +677,7 @@ def health() -> dict[str, str]:
 @app.get("/stats/global", response_model=GlobalStatsResponse)
 def get_global_stats() -> GlobalStatsResponse:
     total_leads_all_time = 0
+    active_jobs = 0
 
     try:
         if db is not None:
@@ -639,10 +698,12 @@ def get_global_stats() -> GlobalStatsResponse:
     with tracking_store_lock:
         total_emails_sent = len(tracking_store)
 
-    with JOBS_LOCK:
-        active_jobs = sum(
-            1 for job in JOBS.values() if str(job.get("status", "")).lower() == "running"
-        )
+    try:
+        if db is not None:
+            active_snapshots = db.collection("huntr_jobs").where("status", "==", "running").stream()
+            active_jobs = sum(1 for _ in active_snapshots)
+    except Exception:
+        active_jobs = 0
 
     return GlobalStatsResponse(
         total_leads_all_time=total_leads_all_time,
@@ -687,22 +748,12 @@ def run_hunt(request: HuntRequest) -> HuntStartResponse:
         "sender_service": request.sender_service.strip(),
     }
 
-    with JOBS_LOCK:
-        JOBS[job_id] = {
-            "job_id": job_id,
-            "status": "started",
-            "current_agent": "manager",
-            "leads_found": 0,
-            "leads_scored": 0,
-            "steps_completed": 0,
-            "events": [],
-            "raw_leads": [],
-            "leads": [],
-            "stop_requested": False,
-            "config": config,
-            "created_at": _now_iso(),
-            "started_at_epoch": started_at_epoch,
-        }
+    job = create_job(job_id, config)
+    if not job:
+        raise HTTPException(status_code=503, detail="Job store is unavailable.")
+
+    # Keep an epoch timestamp for duration math without repeated ISO parsing.
+    update_job(job_id, {"started_at_epoch": started_at_epoch})
 
     worker = threading.Thread(target=_run_hunt_job, args=(job_id, config), daemon=True)
     worker.start()
@@ -711,18 +762,15 @@ def run_hunt(request: HuntRequest) -> HuntStartResponse:
 
 @app.post("/hunt/{job_id}/stop", response_model=HuntStopResponse)
 def stop_hunt(job_id: str) -> HuntStopResponse:
-    with JOBS_LOCK:
-        job = JOBS.get(job_id)
-        if job is None:
-            raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
+    job = get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
 
-        status = str(job.get("status", "unknown")).lower()
-        if status != "running":
-            raise HTTPException(status_code=404, detail=f"Job {job_id} is not running.")
+    status = str(job.get("status", "unknown")).lower()
+    if status not in {"started", "running"}:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} is not running.")
 
-        job["stop_requested"] = True
-        job["status"] = "stopped"
-        job["current_agent"] = "manager"
+    set_job_stop(job_id)
 
     return HuntStopResponse(job_id=job_id, status="stopped")
 
@@ -740,23 +788,11 @@ def run_demo_self_correct(request: DemoSelfCorrectRequest) -> DemoSelfCorrectRes
         "demo_mode": True,
     }
 
-    with JOBS_LOCK:
-        JOBS[job_id] = {
-            "job_id": job_id,
-            "status": "started",
-            "current_agent": "manager",
-            "leads_found": 0,
-            "leads_scored": 0,
-            "steps_completed": 0,
-            "events": [],
-            "raw_leads": [],
-            "leads": [],
-            "stop_requested": False,
-            "config": config,
-            "demo_mode": True,
-            "created_at": _now_iso(),
-            "started_at_epoch": started_at_epoch,
-        }
+    job = create_job(job_id, config)
+    if not job:
+        raise HTTPException(status_code=503, detail="Job store is unavailable.")
+
+    update_job(job_id, {"started_at_epoch": started_at_epoch, "demo_mode": True})
 
     worker = threading.Thread(target=_run_hunt_job, args=(job_id, config), daemon=True)
     worker.start()
@@ -765,7 +801,36 @@ def run_demo_self_correct(request: DemoSelfCorrectRequest) -> DemoSelfCorrectRes
 
 @app.get("/status/{job_id}", response_model=JobStatusResponse)
 def get_status(job_id: str) -> JobStatusResponse:
-    job = _job_or_404(job_id)
+    job = get_job(job_id)
+    if not job:
+        campaign = get_campaign(job_id)
+        if campaign is None:
+            raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
+
+        impact = campaign.get("impact") if isinstance(campaign.get("impact"), dict) else {}
+        leads = campaign.get("leads") if isinstance(campaign.get("leads"), list) else []
+        trace = campaign.get("trace") if isinstance(campaign.get("trace"), dict) else {}
+        trace_events = trace.get("events") if isinstance(trace.get("events"), list) else []
+
+        leads_found = _to_int(campaign.get("leads_found"))
+        if leads_found is None:
+            leads_found = _to_int(impact.get("leads_found"))
+        if leads_found is None:
+            leads_found = len(leads)
+
+        leads_scored = _to_int(campaign.get("leads_scored"))
+        if leads_scored is None:
+            leads_scored = leads_found
+
+        return JobStatusResponse(
+            job_id=job_id,
+            status=str(campaign.get("status", "completed")),
+            current_agent="manager",
+            leads_found=max(0, int(leads_found)),
+            leads_scored=max(0, int(leads_scored)),
+            steps_completed=len(trace_events),
+        )
+
     return JobStatusResponse(
         job_id=job_id,
         status=str(job.get("status", "unknown")),
@@ -778,10 +843,42 @@ def get_status(job_id: str) -> JobStatusResponse:
 
 @app.get("/leads/{job_id}", response_model=JobLeadsResponse)
 def get_leads(job_id: str) -> JobLeadsResponse:
-    job = _job_or_404(job_id)
-    leads = list(job.get("leads", []))
+    job = get_job(job_id)
+    if not job:
+        campaign = get_campaign(job_id)
+        if campaign is None:
+            raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
+
+        campaign_leads = campaign.get("leads")
+        leads = [lead for lead in campaign_leads if isinstance(lead, dict)] if isinstance(campaign_leads, list) else []
+        fallback_job = {
+            "leads_found": len(leads),
+            "pipeline_duration_seconds": _to_int(
+                (campaign.get("impact") or {}).get("pipeline_duration_seconds")
+                if isinstance(campaign.get("impact"), dict)
+                else 0
+            )
+            or 0,
+        }
+        impact = _impact_with_defaults(
+            job=fallback_job,
+            leads_qualified=len(leads),
+            candidate=campaign.get("impact"),
+        )
+
+        return JobLeadsResponse(
+            job_id=job_id,
+            leads=leads,
+            impact=JobLeadsResponse.Impact(**impact),
+        )
+
+    leads = _job_leads(job)
     leads_qualified = len(leads)
-    impact = _build_impact(job=job, leads_qualified=leads_qualified)
+    impact = _impact_with_defaults(
+        job=job,
+        leads_qualified=leads_qualified,
+        candidate=job.get("impact"),
+    )
 
     return JobLeadsResponse(
         job_id=job_id,
@@ -816,11 +913,10 @@ def get_campaign_by_job_id(job_id: str) -> dict[str, Any]:
     if campaign is not None:
         return campaign
 
-    with JOBS_LOCK:
-        job = JOBS.get(job_id)
-        if job is None:
-            raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
-        job_snapshot = dict(job)
+    job = get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
+    job_snapshot = dict(job)
 
     return _build_campaign_from_job(job_id=job_id, job=job_snapshot)
 
@@ -836,29 +932,27 @@ async def stream_job(job_id: str) -> StreamingResponse:
                 yield ": keepalive\n\n"
                 last_ping = time.time()
 
-            with JOBS_LOCK:
-                job = JOBS.get(job_id)
-                if job is None:
-                    events = []
-                    status = "unknown"
-                else:
-                    events = list(job.get("events", []))
-                    status = str(job.get("status", "unknown"))
-
-            if job is None:
-                yield (
-                    "data: "
-                    f"{json.dumps({'agent': 'system', 'action': 'error', 'result_summary': 'Job not found', 'timestamp': _now_iso()}, ensure_ascii=True)}"
-                    "\n\n"
-                )
-                break
-
-            if len(events) > last_index:
-                for event in events[last_index:]:
+            events = get_job_events(job_id, last_index)
+            if events:
+                for event in events:
                     yield f"data: {json.dumps(event, ensure_ascii=True)}\n\n"
-                last_index = len(events)
+                last_index += len(events)
 
-            if status in TERMINAL_STATUSES and last_index >= len(events):
+            job = get_job(job_id)
+            if job is None:
+                campaign = get_campaign(job_id)
+                if campaign is None:
+                    yield (
+                        "data: "
+                        f"{json.dumps({'agent': 'system', 'action': 'error', 'result_summary': 'Job not found', 'timestamp': _now_iso()}, ensure_ascii=True)}"
+                        "\n\n"
+                    )
+                    break
+                status = str(campaign.get("status", "unknown")).lower()
+            else:
+                status = str(job.get("status", "unknown")).lower()
+
+            if status in TERMINAL_STATUSES:
                 terminal_event = {
                     "agent": "system",
                     "action": "stream_closed",
@@ -869,7 +963,7 @@ async def stream_job(job_id: str) -> StreamingResponse:
                 yield f"data: {json.dumps(terminal_event, ensure_ascii=True)}\n\n"
                 break
 
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(1)
 
     return StreamingResponse(
         _event_generator(),
@@ -886,15 +980,27 @@ async def stream_job(job_id: str) -> StreamingResponse:
 
 @app.post("/send/{job_id}/{lead_id}", response_model=SendLeadResponse)
 def send_for_lead(job_id: str, lead_id: int, request: SendLeadRequest) -> SendLeadResponse:
-    with JOBS_LOCK:
-        job = JOBS.get(job_id)
-        if job is None:
+    job = get_job(job_id)
+    campaign = None
+
+    if job is None:
+        campaign = get_campaign(job_id)
+        if campaign is None:
             raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
 
-        if str(job.get("status")) != "completed":
-            raise HTTPException(status_code=409, detail="Job is not completed yet.")
+    status = str((job or campaign or {}).get("status") or "unknown").lower()
+    if status != "completed":
+        raise HTTPException(status_code=409, detail="Job is not completed yet.")
 
-        raw_leads = list(job.get("raw_leads", []))
+    if job is not None:
+        raw_leads_candidate = job.get("raw_leads")
+        if isinstance(raw_leads_candidate, list):
+            raw_leads = [lead for lead in raw_leads_candidate if isinstance(lead, dict)]
+        else:
+            raw_leads = _job_leads(job)
+    else:
+        campaign_leads = campaign.get("leads") if isinstance(campaign, dict) else None
+        raw_leads = [lead for lead in campaign_leads if isinstance(lead, dict)] if isinstance(campaign_leads, list) else []
 
     if lead_id < 0 or lead_id >= len(raw_leads):
         raise HTTPException(status_code=404, detail=f"Invalid lead_id: {lead_id}")
@@ -913,8 +1019,9 @@ def send_for_lead(job_id: str, lead_id: int, request: SendLeadRequest) -> SendLe
             detail="Lead not approved. Set approved=true to send.",
         )
 
-    subject = str(lead.get("email_subject") or "").strip()
-    body = str(lead.get("email_body") or "").strip()
+    email_draft = lead.get("email_draft") if isinstance(lead.get("email_draft"), dict) else {}
+    subject = str(lead.get("email_subject") or email_draft.get("subject") or "").strip()
+    body = str(lead.get("email_body") or email_draft.get("body") or "").strip()
     if not subject or not body:
         raise HTTPException(status_code=400, detail="Lead does not contain a generated email draft.")
 

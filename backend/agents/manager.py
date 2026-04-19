@@ -14,7 +14,7 @@ from agents.outreach_agent import OutreachAgent
 from agents.researcher_agent import ResearcherAgent
 from agents.scorer_agent import ScorerAgent
 from agents.scout_agent import ScoutAgent
-from job_state import JOBS, JOBS_LOCK
+from db.campaign_store import get_job, set_job_stop
 
 try:
     from google.adk.models import Gemini
@@ -472,23 +472,16 @@ class HuntRManager:
         if not job_id:
             return False
 
-        with JOBS_LOCK:
-            job = JOBS.get(job_id)
-            if job is None:
-                return False
-            return bool(job.get("stop_requested", False))
+        job = get_job(job_id)
+        if not job:
+            return False
+        return bool(job.get("stop_requested", False))
 
     def _mark_job_stopped(self, job_id: str | None) -> None:
         if not job_id:
             return
 
-        with JOBS_LOCK:
-            job = JOBS.get(job_id)
-            if job is None:
-                return
-            job["stop_requested"] = True
-            job["status"] = "stopped"
-            job["current_agent"] = "manager"
+        set_job_stop(job_id)
 
     def _log_hunt_stopped(self, run_id: str, steps_completed: int) -> None:
         self._append_trace_event(

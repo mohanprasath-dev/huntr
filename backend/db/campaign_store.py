@@ -3,9 +3,12 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from google.cloud import firestore
+from google.cloud import firestore as firestore_module
 
 from db.firestore_client import CAMPAIGNS_COLLECTION, db
+
+
+JOBS_COLLECTION = "huntr_jobs"
 
 
 def _to_iso8601(value: Any) -> str | None:
@@ -38,10 +41,16 @@ def _created_at_sort_key(value: Any) -> float:
     return 0.0
 
 
-def _collection() -> firestore.CollectionReference | None:
+def _collection() -> firestore_module.CollectionReference | None:
     if db is None:
         return None
     return db.collection(CAMPAIGNS_COLLECTION)
+
+
+def _jobs_collection() -> firestore_module.CollectionReference | None:
+    if db is None:
+        return None
+    return db.collection(JOBS_COLLECTION)
 
 
 def save_campaign(
@@ -76,8 +85,8 @@ def save_campaign(
                 "niche": str(config.get("niche", "")),
                 "pain_keyword": str(config.get("pain_keyword", "")),
                 "leads_count": len(leads),
-                "created_at": created_at or firestore.SERVER_TIMESTAMP,
-                "updated_at": firestore.SERVER_TIMESTAMP,
+                "created_at": created_at or firestore_module.SERVER_TIMESTAMP,
+                "updated_at": firestore_module.SERVER_TIMESTAMP,
             },
             merge=True,
         )
@@ -122,7 +131,9 @@ def list_campaigns(limit: int = 10) -> list[dict[str, Any]]:
     used_fallback_sort = False
 
     try:
-        query = collection.order_by("created_at", direction=firestore.Query.DESCENDING).limit(
+        query = collection.order_by(
+            "created_at", direction=firestore_module.Query.DESCENDING
+        ).limit(
             safe_limit
         )
         snapshots = list(query.stream())
@@ -178,9 +189,92 @@ def update_campaign_status(job_id: str, status: str) -> None:
         collection.document(job_id).set(
             {
                 "status": status,
-                "updated_at": firestore.SERVER_TIMESTAMP,
+                "updated_at": firestore_module.SERVER_TIMESTAMP,
             },
             merge=True,
         )
     except Exception:
         return
+
+
+def create_job(job_id: str, config: dict[str, Any]) -> dict[str, Any]:
+    collection = _jobs_collection()
+    if collection is None:
+        return {}
+
+    job_data: dict[str, Any] = {
+        "job_id": job_id,
+        "status": "started",
+        "config": config,
+        "current_agent": "",
+        "leads_found": 0,
+        "leads_scored": 0,
+        "steps_completed": 0,
+        "stop_requested": False,
+        "demo_mode": bool(config.get("demo_mode", False)),
+        "started_at": datetime.utcnow().isoformat(),
+        "completed_at": None,
+        "result_leads": [],
+        "impact": {},
+        "events": [],
+    }
+    collection.document(job_id).set(job_data)
+    return job_data
+
+
+def get_job(job_id: str) -> dict[str, Any] | None:
+    collection = _jobs_collection()
+    if collection is None:
+        return None
+
+    doc = collection.document(job_id).get()
+    if not doc.exists:
+        return None
+
+    job = doc.to_dict() or {}
+    job.setdefault("job_id", job_id)
+    return job
+
+
+def update_job(job_id: str, updates: dict[str, Any]) -> None:
+    collection = _jobs_collection()
+    if collection is None:
+        return
+
+    collection.document(job_id).set(updates, merge=True)
+
+
+def append_job_event(job_id: str, event: dict[str, Any]) -> None:
+    """Append an event to the job's event list using Firestore array union."""
+    collection = _jobs_collection()
+    if collection is None:
+        return
+
+    collection.document(job_id).update({"events": firestore_module.ArrayUnion([event])})
+
+
+def set_job_stop(job_id: str) -> None:
+    collection = _jobs_collection()
+    if collection is None:
+        return
+
+    collection.document(job_id).update(
+        {
+            "stop_requested": True,
+            "status": "stopped",
+            "current_agent": "manager",
+        }
+    )
+
+
+def get_job_events(job_id: str, since_index: int = 0) -> list[dict[str, Any]]:
+    job = get_job(job_id)
+    if not job:
+        return []
+
+    events = job.get("events", [])
+    if not isinstance(events, list):
+        return []
+
+    safe_index = max(0, int(since_index or 0))
+    return [event for event in events[safe_index:] if isinstance(event, dict)]
