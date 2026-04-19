@@ -1,0 +1,537 @@
+[
+  {
+    "timestamp": "2026-04-19T05:54:37.701852+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "manager:start",
+    "payload": {
+      "niche": "AI Services",
+      "pain_keyword": "manual outbound bottlenecks",
+      "max_leads": 20
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:54:58.609068+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scout:attempt",
+    "payload": {
+      "attempt": 1,
+      "query": "AI Services manual outbound bottlenecks outbound bottleneck",
+      "found": 20,
+      "total_unique": 20
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:55:05.576684+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 1,
+      "company": "AI Outbound Sales For Scaling Startup Revenue Teams",
+      "domain": "b2boutboundsystems.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:55:16.944621+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 2,
+      "company": "\"Comment \"Group\" to get the community link. Your outbound sales ...",
+      "domain": "faq.whatsapp.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:55:32.305194+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 3,
+      "company": "The biggest bottleneck in outbound isn't motivation. It's manual ...",
+      "domain": "goperfect.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:55:42.098407+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 4,
+      "company": "Fixing Business Bottlenecks with AI",
+      "domain": "code81.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:55:51.353391+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 5,
+      "company": "How To Scale Outbound Sales With Automation Tools",
+      "domain": "monday.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:56:06.618408+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 6,
+      "company": "Anthony Benedettini's 3",
+      "domain": "kzoo.edu"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:56:13.917437+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 7,
+      "company": "How To Improve Your Outbound Sales Strategy With AI",
+      "domain": "highspot.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:56:25.949549+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 8,
+      "company": "How do you drive B2B sales in 2026? : r/Entrepreneur",
+      "domain": "niracore.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:56:35.606438+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 9,
+      "company": "Best AI Sales Agents for Outbound Prospecting (2026)",
+      "domain": "salesmotion.io"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:56:45.425543+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 10,
+      "company": "AI Sales Agents: Beginner's Guide for B2B Outbound",
+      "domain": "octavehq.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:56:55.108830+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 11,
+      "company": "AI Outbound Calling Agents: Scale Sales in 2026",
+      "domain": "monday.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:03.501722+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 12,
+      "company": "How AI Identifies Sales Pipeline Bottlenecks",
+      "domain": "sales-mind.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:14.698119+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 13,
+      "company": "How AI is killing outbound sales and what to do instead",
+      "domain": "highspot.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:17.417394+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 14,
+      "company": "AI for Sales Teams in 2026: 10 Tools",
+      "domain": "read.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:20.181031+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 15,
+      "company": "How to Overcome Stalled Pipelines with the Right AI Sales ...",
+      "domain": "11x.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:24.001244+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 16,
+      "company": "Is your sales team reaching their full potential, or are they held back ...",
+      "domain": "instagram.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:26.612437+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 17,
+      "company": "How to Identify Bottlenecks in Your Sales Process with AI?",
+      "domain": "jeeva.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:29.220310+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 18,
+      "company": "AI Tools for Sales Teams That Actually Drive Pipeline in 2026",
+      "domain": "pipeline.zoominfo.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:31.933823+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 19,
+      "company": "How to use AI in sales for prospecting at scale",
+      "domain": "artisan.co"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.495934+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 20,
+      "company": "Am I crazy for thinking AI won't replace Sales soon?",
+      "domain": "reddit.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.498300+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 1,
+      "company": "AI Outbound Sales For Scaling Startup Revenue Teams",
+      "score": 56
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.515558+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 2,
+      "company": "\"Comment \"Group\" to get the community link. Your outbound sales ...",
+      "score": 63
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.532540+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 3,
+      "company": "The biggest bottleneck in outbound isn't motivation. It's manual ...",
+      "score": 53
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.549356+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 4,
+      "company": "Fixing Business Bottlenecks with AI",
+      "score": 40
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.565595+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 5,
+      "company": "How To Scale Outbound Sales With Automation Tools",
+      "score": 40
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.584247+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 6,
+      "company": "Anthony Benedettini's 3",
+      "score": 61
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.601334+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 7,
+      "company": "How To Improve Your Outbound Sales Strategy With AI",
+      "score": 43
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.618257+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 8,
+      "company": "How do you drive B2B sales in 2026? : r/Entrepreneur",
+      "score": 66
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.633734+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 9,
+      "company": "Best AI Sales Agents for Outbound Prospecting (2026)",
+      "score": 35
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.652521+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 10,
+      "company": "AI Sales Agents: Beginner's Guide for B2B Outbound",
+      "score": 43
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.667586+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 11,
+      "company": "AI Outbound Calling Agents: Scale Sales in 2026",
+      "score": 52
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.683572+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 12,
+      "company": "How AI Identifies Sales Pipeline Bottlenecks",
+      "score": 61
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.701390+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 13,
+      "company": "How AI is killing outbound sales and what to do instead",
+      "score": 57
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.719357+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 14,
+      "company": "AI for Sales Teams in 2026: 10 Tools",
+      "score": 40
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.738109+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 15,
+      "company": "How to Overcome Stalled Pipelines with the Right AI Sales ...",
+      "score": 40
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.759698+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 16,
+      "company": "Is your sales team reaching their full potential, or are they held back ...",
+      "score": 35
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.777409+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 17,
+      "company": "How to Identify Bottlenecks in Your Sales Process with AI?",
+      "score": 40
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.793178+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 18,
+      "company": "AI Tools for Sales Teams That Actually Drive Pipeline in 2026",
+      "score": 35
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.812287+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 19,
+      "company": "How to use AI in sales for prospecting at scale",
+      "score": 40
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.828673+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 20,
+      "company": "Am I crazy for thinking AI won't replace Sales soon?",
+      "score": 35
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:35.846062+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "scorer:pass",
+    "payload": {
+      "threshold": 60,
+      "qualified": 4,
+      "scored": 20
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:38.117602+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 1,
+      "company": "\"Comment \"Group\" to get the community link. Your outbound sales ..."
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:38.119948+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 1,
+      "company": "\"Comment \"Group\" to get the community link. Your outbound sales ...",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:38.532482+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 2,
+      "company": "Anthony Benedettini's 3"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:38.534063+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 2,
+      "company": "Anthony Benedettini's 3",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:39.812426+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 3,
+      "company": "How do you drive B2B sales in 2026? : r/Entrepreneur"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:39.814233+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 3,
+      "company": "How do you drive B2B sales in 2026? : r/Entrepreneur",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:40.225213+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 4,
+      "company": "How AI Identifies Sales Pipeline Bottlenecks"
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:40.227365+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 4,
+      "company": "How AI Identifies Sales Pipeline Bottlenecks",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-19T05:57:40.244705+00:00",
+    "run_id": "437205e3-0e8f-458a-8cb3-b650f3a8387f",
+    "step": "manager:complete",
+    "payload": {
+      "returned_leads": 4
+    }
+  }
+]
