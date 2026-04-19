@@ -129,6 +129,24 @@ function deriveRecipientEmailHint(lead: Lead): string {
   return trimmedHint || "";
 }
 
+function deriveCompanyDisplay(lead: Lead): {
+  label: "COMPANY" | "SOURCE";
+  displayName: string;
+  isSourceLike: boolean;
+} {
+  const rawCompanyName = String(lead.company || "").trim();
+  const companyName = rawCompanyName || "Unknown Company";
+  const isSourceLike = /http/i.test(companyName) || /^\d+\s/.test(companyName);
+  const displayName =
+    companyName.length > 50 ? `${companyName.slice(0, 50)}...` : companyName;
+
+  return {
+    label: isSourceLike ? "SOURCE" : "COMPANY",
+    displayName,
+    isSourceLike,
+  };
+}
+
 function deriveLeadSource(lead: Lead): "LinkedIn" | "Reddit" | "Twitter" {
   const explicitSource = String(lead.source || "").toLowerCase();
   if (explicitSource.includes("reddit")) {
@@ -353,6 +371,7 @@ export default function LeadCard({
 
   const scoreTone = useMemo(() => getScoreTone(numericScore), [numericScore]);
   const companySize = useMemo(() => deriveCompanySize(lead), [lead]);
+  const companyDisplay = useMemo(() => deriveCompanyDisplay(lead), [lead]);
   const decisionMaker = useMemo(() => parseDecisionMaker(lead), [lead]);
   const painPoint = useMemo(() => derivePainPoint(lead), [lead]);
   const source = useMemo(() => deriveLeadSource(lead), [lead]);
@@ -425,7 +444,19 @@ export default function LeadCard({
     >
       <header className="flex pr-20 sm:pr-0">
         <div className="min-w-0">
-          <h3 className="text-lg font-semibold text-white">{lead.company}</h3>
+          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.15em] text-muted">
+            {companyDisplay.label}
+          </p>
+          <h3
+            className={`mt-1 text-lg ${
+              companyDisplay.isSourceLike
+                ? "font-medium italic text-muted"
+                : "font-semibold text-white"
+            }`}
+            title={String(lead.company || "")}
+          >
+            {companyDisplay.displayName}
+          </h3>
           <p className="mt-1 text-sm text-muted">Size: {companySize}</p>
         </div>
         <div
