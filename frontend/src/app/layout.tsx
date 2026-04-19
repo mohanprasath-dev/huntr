@@ -34,6 +34,9 @@ export const metadata: Metadata = {
     url: "https://huntr.app",
     type: "website",
   },
+};
+
+export const viewport = {
   themeColor: "#ffffff",
 };
 

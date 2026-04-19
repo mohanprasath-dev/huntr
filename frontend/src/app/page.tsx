@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
@@ -316,7 +317,13 @@ export default function LandingPage() {
                   className="inline-flex items-center gap-2 rounded-full border border-gray-300 px-2.5 py-1.5 text-sm font-medium text-gray-700 transition hover:border-gray-400 hover:text-black"
                 >
                   {userImage ? (
-                    <img src={userImage} alt={userName} className="h-8 w-8 rounded-full object-cover" />
+                    <Image
+                      src={userImage}
+                      alt={userName}
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 rounded-full object-cover"
+                    />
                   ) : (
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black text-xs font-semibold text-white">
                       {userName.charAt(0).toUpperCase()}
