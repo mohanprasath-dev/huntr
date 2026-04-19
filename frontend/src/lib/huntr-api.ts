@@ -1,4 +1,6 @@
 import type {
+  CampaignDetail,
+  CampaignSummary,
   DemoSelfCorrectRequestPayload,
   DemoSelfCorrectResponse,
   HuntRequestPayload,
@@ -13,6 +15,22 @@ const DEFAULT_API_BASE_URL = "http://localhost:8000";
 
 export const HUNTR_API_BASE_URL =
   process.env.NEXT_PUBLIC_HUNTR_API_BASE_URL?.replace(/\/$/, "") ?? DEFAULT_API_BASE_URL;
+
+export class ApiRequestError extends Error {
+  readonly status: number;
+  readonly detail: string;
+
+  constructor(status: number, detail: string) {
+    super(`API request failed: ${detail}`);
+    this.name = "ApiRequestError";
+    this.status = status;
+    this.detail = detail;
+  }
+}
+
+export function isApiRequestError(error: unknown): error is ApiRequestError {
+  return error instanceof ApiRequestError;
+}
 
 function buildUrl(path: string): string {
   const safePath = path.startsWith("/") ? path : `/${path}`;
@@ -47,7 +65,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const detail = await parseError(response);
-    throw new Error(`API request failed: ${detail}`);
+    throw new ApiRequestError(response.status, detail);
   }
 
   return (await response.json()) as T;
@@ -79,6 +97,14 @@ export async function getJobStatus(jobId: string): Promise<JobStatusResponse> {
 
 export async function getJobLeads(jobId: string): Promise<JobLeadsResponse> {
   return requestJson<JobLeadsResponse>(`/leads/${jobId}`);
+}
+
+export async function getCampaignHistory(): Promise<CampaignSummary[]> {
+  return requestJson<CampaignSummary[]>("/campaigns");
+}
+
+export async function getCampaignByJobId(jobId: string): Promise<CampaignDetail> {
+  return requestJson<CampaignDetail>(`/campaigns/${jobId}`);
 }
 
 export async function sendLead(

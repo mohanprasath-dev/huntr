@@ -1,4 +1,5 @@
 import CampaignForm from "@/components/CampaignForm";
+import CampaignHistory from "@/components/CampaignHistory";
 
 export default function Home() {
   return (
@@ -34,6 +35,18 @@ export default function Home() {
 
         <div className="rounded-2xl border border-white/10 bg-panel-elevated/70 p-4 backdrop-blur md:p-5">
           <CampaignForm />
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
+          Recent Campaigns
+        </h2>
+        <p className="mt-2 text-sm text-muted">
+          Resume previous hunts and review outcomes at a glance.
+        </p>
+        <div className="mt-4">
+          <CampaignHistory />
         </div>
       </section>
     </main>

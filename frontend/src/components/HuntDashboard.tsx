@@ -11,6 +11,10 @@ import type { JobImpact, JobStatusResponse, Lead } from "@/lib/huntr-types";
 
 interface HuntDashboardProps {
   jobId: string;
+  initialLeads?: Lead[];
+  initialImpact?: JobImpact | null;
+  initialStatus?: JobStatusResponse | null;
+  disablePolling?: boolean;
 }
 
 type LeadSource = "LinkedIn" | "Reddit" | "Twitter";
@@ -82,17 +86,30 @@ function statusTone(status: string): string {
   return "border-white/20 bg-white/5 text-white/80";
 }
 
-export default function HuntDashboard({ jobId }: HuntDashboardProps) {
-  const [status, setStatus] = useState<JobStatusResponse | null>(null);
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [impact, setImpact] = useState<JobImpact | null>(null);
+export default function HuntDashboard({
+  jobId,
+  initialLeads = [],
+  initialImpact = null,
+  initialStatus = null,
+  disablePolling = false,
+}: HuntDashboardProps) {
+  const [status, setStatus] = useState<JobStatusResponse | null>(initialStatus);
+  const [leads, setLeads] = useState<Lead[]>(initialLeads);
+  const [impact, setImpact] = useState<JobImpact | null>(initialImpact);
   const [sentLeadIds, setSentLeadIds] = useState<number[]>([]);
   const [scoreFilter, setScoreFilter] = useState<ScoreRangeFilter>("all");
   const [sourceFilter, setSourceFilter] = useState<"all" | LeadSource>("all");
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(
+    initialStatus === null && initialImpact === null && initialLeads.length === 0,
+  );
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (disablePolling) {
+      setIsInitialLoading(false);
+      return;
+    }
+
     let isMounted = true;
     let nextTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -141,7 +158,7 @@ export default function HuntDashboard({ jobId }: HuntDashboardProps) {
         clearTimeout(nextTimer);
       }
     };
-  }, [jobId]);
+  }, [disablePolling, jobId]);
 
   const processedLeads = useMemo<LeadWithMeta[]>(() => {
     return leads

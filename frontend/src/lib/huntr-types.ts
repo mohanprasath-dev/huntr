@@ -90,6 +90,35 @@ export interface JobLeadsResponse {
   impact: JobImpact;
 }
 
+export interface CampaignSummary {
+  job_id: string;
+  niche: string;
+  pain_keyword: string;
+  leads_count: number;
+  created_at?: string | null;
+  status: JobStatus | string;
+  leads_found?: number;
+  leads_qualified?: number;
+}
+
+export interface CampaignDetail {
+  job_id: string;
+  config?: Record<string, unknown>;
+  status: JobStatus | string;
+  leads: Lead[];
+  impact?: JobImpact | null;
+  trace?: {
+    events?: StreamEvent[];
+    path?: string;
+    raw_trace_events?: Array<Record<string, unknown>>;
+  };
+  niche?: string;
+  pain_keyword?: string;
+  leads_count?: number;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
 export interface StreamEvent {
   agent: AgentId | string;
   action: string;
