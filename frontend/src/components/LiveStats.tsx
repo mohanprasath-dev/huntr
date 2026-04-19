@@ -104,25 +104,25 @@ export default function LiveStats() {
 
   return (
     <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      <article className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-4 shadow-[0_1px_3px_rgba(0,0,0,0.08)] transition-shadow duration-200 hover:shadow-[0_6px_16px_rgba(0,102,255,0.12)]">
-        <p className="text-3xl font-bold tracking-tight text-[#0066ff]">
+      <article className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-4">
+        <p className="text-2xl font-bold tracking-tight text-[#111827]">
           🎯 {displayedStats.total_leads_all_time.toLocaleString()} leads found
         </p>
-        <p className="mt-2 text-xs uppercase tracking-[0.12em] text-[#6b7280]">Across all campaigns</p>
+        <p className="mt-2 text-xs uppercase tracking-wide text-[#6b7280]">Across all campaigns</p>
       </article>
 
-      <article className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-4 shadow-[0_1px_3px_rgba(0,0,0,0.08)] transition-shadow duration-200 hover:shadow-[0_6px_16px_rgba(0,102,255,0.12)]">
-        <p className="text-3xl font-bold tracking-tight text-[#0066ff]">
+      <article className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-4">
+        <p className="text-2xl font-bold tracking-tight text-[#111827]">
           ✉️ {displayedStats.total_emails_sent.toLocaleString()} emails sent
         </p>
-        <p className="mt-2 text-xs uppercase tracking-[0.12em] text-[#6b7280]">Tracked deliveries</p>
+        <p className="mt-2 text-xs uppercase tracking-wide text-[#6b7280]">Tracked deliveries</p>
       </article>
 
-      <article className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-4 shadow-[0_1px_3px_rgba(0,0,0,0.08)] transition-shadow duration-200 hover:shadow-[0_6px_16px_rgba(0,102,255,0.12)]">
-        <p className="text-3xl font-bold tracking-tight text-[#0066ff]">
+      <article className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-4">
+        <p className="text-2xl font-bold tracking-tight text-[#111827]">
           ⚡ {displayedStats.active_jobs.toLocaleString()} active hunts
         </p>
-        <p className="mt-2 text-xs uppercase tracking-[0.12em] text-[#6b7280]">Running right now</p>
+        <p className="mt-2 text-xs uppercase tracking-wide text-[#6b7280]">Running right now</p>
       </article>
     </section>
   );

@@ -11,10 +11,10 @@ export default function Home() {
             <p className="inline-flex rounded-full border border-[#e5e7eb] bg-[#f3f4f6] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#111827]">
               HUNTR CONTROL CENTER
             </p>
-            <h1 className="mt-5 max-w-4xl text-4xl font-semibold tracking-tight text-[#111827] md:text-6xl">
+            <h1 className="mt-5 max-w-4xl text-2xl font-bold tracking-tight text-[#111827]">
               Autonomous client acquisition, shipped like a funded product.
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#6b7280] md:text-lg">
+            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[#6b7280]">
               Configure your campaign once, then watch five specialized agents discover, qualify,
               and draft outbound for your highest-intent prospects in real time.
             </p>
