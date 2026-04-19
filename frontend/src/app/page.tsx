@@ -234,6 +234,12 @@ export default function LandingPage() {
 
           <div className="flex items-center gap-3">
             <Link
+              href="/build"
+              className="text-sm font-medium text-[#374151] transition hover:text-[#111827]"
+            >
+              Build Story
+            </Link>
+            <Link
               href="/app"
               className="inline-flex items-center rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-gray-400 hover:text-black"
             >
@@ -421,6 +427,75 @@ export default function LandingPage() {
                 {tech}
               </span>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#f9fafb] py-20 sm:py-24">
+        <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-start lg:px-8">
+          <div>
+            <p className="inline-flex rounded-full border border-[#e5e7eb] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
+              BEHIND THE BUILD
+            </p>
+            <h2 className="mt-5 max-w-2xl text-3xl font-semibold tracking-tight text-black md:text-5xl">
+              From idea to deployed product in under 6 hours.
+            </h2>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#4b5563] md:text-lg">
+              HuntR was built solo during Agentathon 2026 - from blank repo to production-deployed
+              multi-agent system in a single session.
+            </p>
+
+            <div className="mt-6 flex flex-wrap gap-2">
+              {[
+                "< 6 hrs",
+                "5 agents",
+                "2 deployments",
+                "1 developer",
+              ].map((stat) => (
+                <span
+                  key={stat}
+                  className="inline-flex rounded-full bg-[#f3f4f6] px-3 py-1 text-xs font-semibold text-[#374151]"
+                >
+                  {stat}
+                </span>
+              ))}
+            </div>
+
+            <Link
+              href="/build"
+              className="mt-8 inline-flex items-center rounded-full border border-black px-6 py-3 text-sm font-semibold text-black transition hover:bg-black hover:text-white"
+            >
+              Read the build story →
+            </Link>
+          </div>
+
+          <div className="border-l-2 border-[#e5e7eb] pl-6 sm:pl-8">
+            <ol className="space-y-6">
+              <li>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#9ca3af]">Hour 1</p>
+                <p className="mt-1 text-sm leading-relaxed text-[#374151]">
+                  Core agent pipeline working in terminal
+                </p>
+              </li>
+              <li>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#9ca3af]">Hour 2</p>
+                <p className="mt-1 text-sm leading-relaxed text-[#374151]">
+                  FastAPI + SSE streaming + email delivery
+                </p>
+              </li>
+              <li>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#9ca3af]">Hour 3</p>
+                <p className="mt-1 text-sm leading-relaxed text-[#374151]">
+                  Dashboard deployed to Cloud Run + Vercel
+                </p>
+              </li>
+              <li>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#9ca3af]">Days 2-3</p>
+                <p className="mt-1 text-sm leading-relaxed text-[#374151]">
+                  Intelligence upgrades + full product polish
+                </p>
+              </li>
+            </ol>
           </div>
         </div>
       </section>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Sora } from "next/font/google";
 import AppShell from "@/components/AppShell";
+import FeedbackWidget from "@/components/FeedbackWidget";
 import "./globals.css";
 
 const sora = Sora({
@@ -44,6 +45,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${sora.variable} ${ibmPlexMono.variable} antialiased`}>
         <AppShell>{children}</AppShell>
+        <FeedbackWidget />
       </body>
     </html>
   );
