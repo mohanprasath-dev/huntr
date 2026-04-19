@@ -26,14 +26,14 @@ const TIMELINE_ENTRIES = [
       "Built Next.js dashboard with live agent pipeline visualization. Deployed backend to Cloud Run, frontend to Vercel. First production hunt completed.",
   },
   {
-    time: "Days 2-3",
+    time: "Hour 3 - 6",
     title: "Intelligence + Polish",
     description:
       "Upgraded Scout with India-specific query strategies. Added Firestore persistence, CSV export, email open tracking, voice input, campaign comparison, and full light theme.",
   },
   {
     time: "Final",
-    title: "National-Level Product",
+    title: "Production-Ready Product",
     description:
       "Landing page, build story, full responsiveness pass. HuntR is now a production-ready B2B sales automation platform.",
   },
@@ -43,7 +43,7 @@ const TECH_DECISIONS = [
   {
     title: "Why Google ADK over CrewAI",
     description:
-      "Google ADK was directly taught in our NIAT curriculum and integrates natively with Vertex AI Gemini 2.5. We use Gemini 2.5 Pro for the Manager and Outreach agents where reasoning quality matters most, and Gemini 2.5 Flash for Scout, Researcher, Scorer and Followup where speed is the priority.",
+      "Google ADK integrates natively with Vertex AI Gemini 2.5 and fits this architecture immediately. We use Gemini 2.5 Pro for the Manager and Outreach agents where reasoning quality matters most, and Gemini 2.5 Flash for Scout, Researcher, Scorer and Followup where speed is the priority.",
   },
   {
     title: "Why SSE over WebSockets",
@@ -75,7 +75,7 @@ export default function BuildStoryPage() {
       <div className="mx-auto w-full max-w-5xl px-4 pb-20 pt-16 sm:px-6 lg:px-8">
         <header className="border-b border-slate-200 pb-10">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-            AGENTATHON 2026 · BUILD STORY
+            BUILD STORY · APRIL 2026
           </p>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
             How HuntR was built

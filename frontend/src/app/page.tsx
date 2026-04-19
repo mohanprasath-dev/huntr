@@ -577,7 +577,7 @@ export default function LandingPage() {
               From idea to deployed product in under 6 hours.
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#4b5563] md:text-lg">
-              HuntR was built solo during Agentathon 2026 - from blank repo to production-deployed
+              HuntR was built solo in April 2026 - from blank repo to production-deployed
               multi-agent system in a single session.
             </p>
 
@@ -626,7 +626,7 @@ export default function LandingPage() {
                 </p>
               </li>
               <li>
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#9ca3af]">Days 2-3</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#9ca3af]">Hour 3-6</p>
                 <p className="mt-1 text-sm leading-relaxed text-[#374151]">
                   Intelligence upgrades + full product polish
                 </p>
@@ -657,11 +657,12 @@ export default function LandingPage() {
       </section>
 
       <section className="border-y border-gray-200 bg-white py-8">
-        <div className="mx-auto grid w-full max-w-4xl gap-8 px-4 text-center sm:px-6 md:grid-cols-2 md:text-left lg:px-8">
+        <div className="mx-auto w-full max-w-4xl px-4 text-center sm:px-6 md:text-left lg:px-8">
           <div className="space-y-1.5">
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-gray-500">Built by</p>
             <p className="text-lg font-bold text-[#111827]">Mohan Prasath P</p>
             <p className="text-sm text-[#6b7280]">N25C01A0047 · NIAT X Crescent</p>
+            <p className="text-xs text-[#9ca3af]">April 2026</p>
             <div className="mt-3 flex flex-wrap items-center justify-center gap-2 md:justify-start">
               <a
                 href="https://github.com/mohanprasath-dev"
@@ -681,13 +682,6 @@ export default function LandingPage() {
               </a>
             </div>
           </div>
-
-          <div className="space-y-1.5">
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-gray-500">Built for</p>
-            <p className="text-lg font-bold text-[#111827]">Agentathon 2026</p>
-            <p className="text-sm text-[#6b7280]">NIAT Hackathon</p>
-            <p className="text-xs text-[#9ca3af]">April 2026</p>
-          </div>
         </div>
       </section>
 
@@ -704,8 +698,7 @@ export default function LandingPage() {
                 className="text-inherit transition hover:underline"
               >
                 Mohan Prasath P
-              </a>{" "}
-              · Built for Agentathon 2026
+              </a>
             </p>
           </div>
 
