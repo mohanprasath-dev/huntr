@@ -7,14 +7,6 @@ import { signIn, signOut, useSession } from "next-auth/react";
 
 const AGENT_CARDS = [
   {
-    id: "00",
-    name: "Manager",
-    description:
-      "Orchestrates every stage, handles retries, and keeps the full hunt pipeline aligned",
-    modelBadge: "Pro ✦",
-    modelTier: "pro",
-  },
-  {
     id: "01",
     name: "Scout",
     description:
@@ -325,8 +317,19 @@ export default function LandingPage() {
                       className="h-8 w-8 rounded-full object-cover"
                     />
                   ) : (
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black text-xs font-semibold text-white">
-                      {userName.charAt(0).toUpperCase()}
+                    <span
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black text-white"
+                      aria-hidden="true"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+                        <circle cx="12" cy="8" r="3" stroke="currentColor" strokeWidth="1.8" />
+                        <path
+                          d="M6.5 18c.6-2.5 2.8-4 5.5-4s4.9 1.5 5.5 4"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                        />
+                      </svg>
                     </span>
                   )}
                   <span className="hidden sm:inline">{userName}</span>
@@ -441,13 +444,13 @@ export default function LandingPage() {
       <section id="how-it-works" ref={cardsRef} className="bg-white py-20 sm:py-24">
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
           <h2 className="text-center text-3xl font-semibold tracking-tight text-black md:text-5xl">
-            Six agents. One goal.
+            Five agents. One goal.
           </h2>
           <p className="mx-auto mt-4 max-w-3xl text-center text-base text-gray-600 md:text-lg">
             Each agent is specialized. Together, they replace your entire outbound sales process.
           </p>
 
-          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {AGENT_CARDS.map((card, index) => (
               <article
                 key={card.id}

@@ -63,6 +63,23 @@ body {
   box-sizing: border-box;
 }
 
+.agent-pipeline-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.agent-pipeline-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.agent-pipeline-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #e5e7eb;
+}
+
+.agent-pipeline-scroll::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
+
 img,
 svg,
 video,

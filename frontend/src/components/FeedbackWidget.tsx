@@ -29,8 +29,8 @@ export default function FeedbackWidget() {
 
   const isHuntPage = useMemo(() => pathname.includes("/hunt/"), [pathname]);
   const buttonPositionClass = isHuntPage
-    ? "bottom-4 left-4 sm:bottom-6 sm:left-6"
-    : "bottom-4 right-4 sm:bottom-6 sm:right-6";
+    ? "bottom-6 left-6"
+    : "bottom-6 right-6";
 
   function resetFormState(): void {
     setRating(0);
@@ -135,7 +135,7 @@ export default function FeedbackWidget() {
       <button
         type="button"
         onClick={handleOpen}
-        className={`fixed ${buttonPositionClass} z-50 inline-flex items-center rounded-full border border-[#e5e7eb] bg-white px-4 py-2 text-sm font-medium text-[#374151] transition-transform duration-200 hover:scale-[1.02] hover:shadow-[0_6px_16px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111827] focus-visible:ring-offset-2`}
+        className={`fixed ${buttonPositionClass} z-40 inline-flex items-center rounded-full border border-[#e5e7eb] bg-white px-4 py-2 text-sm font-medium text-[#374151] transition-transform duration-200 hover:scale-[1.02] hover:shadow-[0_6px_16px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111827] focus-visible:ring-offset-2`}
         style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}
         aria-label="Open feedback form"
       >

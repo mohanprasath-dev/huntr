@@ -2,10 +2,16 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
-import { HUNTR_API_BASE_URL } from "@/lib/huntr-api";
+import { getJobStatus, stopHunt } from "@/lib/huntr-api";
+
+type HuntLifecycleState = "unknown" | "running" | "stopped" | "completed" | "failed";
+
+interface HuntStatusEventDetail {
+  jobId: string;
+}
 
 function getJobIdFromPath(pathname: string): string | null {
   const match = pathname.match(/^\/app\/hunt\/([^/]+)\/?$/);
@@ -21,21 +27,23 @@ function getJobIdFromPath(pathname: string): string | null {
   }
 }
 
-async function parseStopError(response: Response): Promise<string> {
-  let detail = `${response.status} ${response.statusText}`.trim();
+function toHuntLifecycleState(status: string): HuntLifecycleState {
+  const normalized = status.toLowerCase();
 
-  try {
-    const payload = (await response.json()) as { detail?: unknown; message?: unknown };
-    if (typeof payload.detail === "string" && payload.detail.trim().length > 0) {
-      detail = payload.detail.trim();
-    } else if (typeof payload.message === "string" && payload.message.trim().length > 0) {
-      detail = payload.message.trim();
-    }
-  } catch {
-    // Ignore non-JSON error payloads.
+  if (normalized === "stopped") {
+    return "stopped";
+  }
+  if (normalized === "completed") {
+    return "completed";
+  }
+  if (normalized === "failed") {
+    return "failed";
+  }
+  if (normalized === "running" || normalized === "queued" || normalized === "processing") {
+    return "running";
   }
 
-  return detail || "Unable to stop this hunt.";
+  return "unknown";
 }
 
 function navLinkClass(isActive: boolean): string {
@@ -48,12 +56,12 @@ function navLinkClass(isActive: boolean): string {
 
 export default function Navbar() {
   const pathname = usePathname();
-  const router = useRouter();
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const { data: session } = useSession();
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
+  const [huntState, setHuntState] = useState<HuntLifecycleState>("unknown");
   const [stopError, setStopError] = useState<string | null>(null);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
@@ -62,7 +70,11 @@ export default function Navbar() {
   const userImage = session?.user?.image?.trim() || "";
 
   const activeJobId = useMemo(() => getJobIdFromPath(pathname), [pathname]);
-  const showStopButton = Boolean(activeJobId);
+  const showStopButton =
+    Boolean(activeJobId) &&
+    huntState !== "stopped" &&
+    huntState !== "completed" &&
+    huntState !== "failed";
 
   useEffect(() => {
     setIsMobileOpen(false);
@@ -70,6 +82,98 @@ export default function Navbar() {
     setIsStopping(false);
     setIsProfileMenuOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!activeJobId) {
+      setHuntState("unknown");
+      return;
+    }
+
+    let isMounted = true;
+    let nextTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const syncHuntState = async (): Promise<void> => {
+      try {
+        const status = await getJobStatus(activeJobId);
+        if (!isMounted) {
+          return;
+        }
+
+        const nextState = toHuntLifecycleState(String(status.status ?? ""));
+        setHuntState(nextState);
+
+        if (nextState === "running" || nextState === "unknown") {
+          nextTimer = setTimeout(syncHuntState, 3500);
+        }
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+        nextTimer = setTimeout(syncHuntState, 4500);
+      }
+    };
+
+    void syncHuntState();
+
+    return () => {
+      isMounted = false;
+      if (nextTimer) {
+        clearTimeout(nextTimer);
+      }
+    };
+  }, [activeJobId]);
+
+  useEffect(() => {
+    const onHuntStopped = (event: Event): void => {
+      if (!activeJobId) {
+        return;
+      }
+
+      const detail = (event as CustomEvent<HuntStatusEventDetail>).detail;
+      if (!detail || detail.jobId !== activeJobId) {
+        return;
+      }
+
+      setHuntState("stopped");
+    };
+
+    const onHuntCompleted = (event: Event): void => {
+      if (!activeJobId) {
+        return;
+      }
+
+      const detail = (event as CustomEvent<HuntStatusEventDetail>).detail;
+      if (!detail || detail.jobId !== activeJobId) {
+        return;
+      }
+
+      setHuntState("completed");
+    };
+
+    const onHuntResumed = (event: Event): void => {
+      if (!activeJobId) {
+        return;
+      }
+
+      const detail = (event as CustomEvent<Partial<HuntStatusEventDetail>>).detail;
+      if (detail?.jobId && detail.jobId !== activeJobId) {
+        return;
+      }
+
+      setHuntState("running");
+      setStopError(null);
+    };
+
+    window.addEventListener("hunt-stopped", onHuntStopped as EventListener);
+    window.addEventListener("hunt-completed", onHuntCompleted as EventListener);
+    window.addEventListener("hunt-resumed", onHuntResumed);
+
+    return () => {
+      window.removeEventListener("hunt-stopped", onHuntStopped as EventListener);
+      window.removeEventListener("hunt-completed", onHuntCompleted as EventListener);
+      window.removeEventListener("hunt-resumed", onHuntResumed);
+    };
+  }, [activeJobId]);
 
   useEffect(() => {
     if (!isProfileMenuOpen) {
@@ -105,20 +209,14 @@ export default function Navbar() {
     setStopError(null);
 
     try {
-      const response = await fetch(
-        `${HUNTR_API_BASE_URL}/hunt/${encodeURIComponent(activeJobId)}/stop`,
-        {
-          method: "POST",
-          cache: "no-store",
-        },
+      await stopHunt(activeJobId);
+      window.dispatchEvent(
+        new CustomEvent<HuntStatusEventDetail>("hunt-stopped", {
+          detail: { jobId: activeJobId },
+        }),
       );
-
-      if (!response.ok) {
-        throw new Error(await parseStopError(response));
-      }
-
+      setHuntState("stopped");
       setIsMobileOpen(false);
-      router.refresh();
     } catch (error) {
       setStopError(error instanceof Error ? error.message : "Unable to stop this hunt.");
     } finally {
@@ -176,8 +274,19 @@ export default function Navbar() {
                   className="h-8 w-8 rounded-full object-cover"
                 />
               ) : (
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#111827] text-xs font-semibold text-white">
-                  {userName.charAt(0).toUpperCase()}
+                <span
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#111827] text-white"
+                  aria-hidden="true"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+                    <circle cx="12" cy="8" r="3" stroke="currentColor" strokeWidth="1.8" />
+                    <path
+                      d="M6.5 18c.6-2.5 2.8-4 5.5-4s4.9 1.5 5.5 4"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                    />
+                  </svg>
                 </span>
               )}
               <span className="hidden text-sm font-medium sm:inline">{userName}</span>

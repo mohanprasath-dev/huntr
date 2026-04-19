@@ -14,6 +14,10 @@ type SseStatus = "connecting" | "connected" | "running" | "closed" | "error";
 type StagePhase = "inactive" | "active" | "complete" | "cancelled";
 type SelfCorrectionBannerState = "hidden" | "triggered" | "resolved";
 
+interface HuntStatusEventDetail {
+  jobId: string;
+}
+
 const PIPELINE_STAGES = [
   {
     id: "scout",
@@ -165,9 +169,12 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
   const [streamState, setStreamState] = useState<StreamState>("connecting");
   const [isStopping, setIsStopping] = useState(false);
   const [stopError, setStopError] = useState("");
+  const [isExternallyStopped, setIsExternallyStopped] = useState(false);
+  const [showStoppedBanner, setShowStoppedBanner] = useState(false);
   const [selfCorrectionBannerState, setSelfCorrectionBannerState] =
     useState<SelfCorrectionBannerState>("hidden");
   const logContainerRef = useRef<HTMLDivElement | null>(null);
+  const completedDispatchRef = useRef(false);
   const scoutAttemptCounterRef = useRef(0);
 
   useEffect(() => {
@@ -179,7 +186,10 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
     setStreamState("connecting");
     setIsStopping(false);
     setStopError("");
+    setIsExternallyStopped(false);
+    setShowStoppedBanner(false);
     setSelfCorrectionBannerState("hidden");
+    completedDispatchRef.current = false;
 
     source.onopen = () => {
       setStreamState("live");
@@ -231,6 +241,40 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
 
     return () => {
       source.close();
+    };
+  }, [jobId]);
+
+  useEffect(() => {
+    const onHuntStopped = (event: Event): void => {
+      const detail = (event as CustomEvent<HuntStatusEventDetail>).detail;
+      if (!detail || detail.jobId !== jobId) {
+        return;
+      }
+
+      setIsExternallyStopped(true);
+      setShowStoppedBanner(true);
+      setIsStopping(false);
+      setStopError("");
+    };
+
+    const onHuntResumed = (event: Event): void => {
+      const detail = (event as CustomEvent<Partial<HuntStatusEventDetail>>).detail;
+      if (detail?.jobId && detail.jobId !== jobId) {
+        return;
+      }
+
+      setIsExternallyStopped(false);
+      setShowStoppedBanner(false);
+      setIsStopping(false);
+      setStopError("");
+    };
+
+    window.addEventListener("hunt-stopped", onHuntStopped as EventListener);
+    window.addEventListener("hunt-resumed", onHuntResumed as EventListener);
+
+    return () => {
+      window.removeEventListener("hunt-stopped", onHuntStopped as EventListener);
+      window.removeEventListener("hunt-resumed", onHuntResumed as EventListener);
     };
   }, [jobId]);
 
@@ -370,6 +414,37 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
     });
   }, [events]);
 
+  const isCompletedRun = useMemo(() => {
+    return events.some((event) => {
+      const action = event.action.toLowerCase();
+      const agent = event.agent.toLowerCase();
+      return agent === "manager" && action === "complete";
+    });
+  }, [events]);
+
+  const hasStoppedState = isStoppedRun || isExternallyStopped;
+
+  useEffect(() => {
+    if (!hasStoppedState) {
+      return;
+    }
+
+    setShowStoppedBanner(true);
+  }, [hasStoppedState]);
+
+  useEffect(() => {
+    if (!isCompletedRun || completedDispatchRef.current) {
+      return;
+    }
+
+    completedDispatchRef.current = true;
+    window.dispatchEvent(
+      new CustomEvent<HuntStatusEventDetail>("hunt-completed", {
+        detail: { jobId },
+      }),
+    );
+  }, [isCompletedRun, jobId]);
+
   const sseStatus = useMemo<SseStatus>(() => {
     if (streamState === "error") {
       return "error";
@@ -393,10 +468,10 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
       return;
     }
 
-    if (isStoppedRun || streamState === "closed" || streamState === "error") {
+    if (hasStoppedState || streamState === "closed" || streamState === "error") {
       setIsStopping(false);
     }
-  }, [isStopping, isStoppedRun, streamState]);
+  }, [hasStoppedState, isStopping, streamState]);
 
   async function handleStop(): Promise<void> {
     if (isStopping) {
@@ -408,6 +483,13 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
 
     try {
       await stopHunt(jobId);
+      setIsExternallyStopped(true);
+      setShowStoppedBanner(true);
+      window.dispatchEvent(
+        new CustomEvent<HuntStatusEventDetail>("hunt-stopped", {
+          detail: { jobId },
+        }),
+      );
     } catch (error) {
       const detail = error instanceof Error ? error.message : "Unable to stop hunt right now.";
       setStopError(detail);
@@ -416,7 +498,7 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
   }
 
   const showStopButton =
-    (sseStatus === "running" || sseStatus === "connected") && !isTerminalRun && !isStoppedRun;
+    (sseStatus === "running" || sseStatus === "connected") && !isTerminalRun && !hasStoppedState;
 
   const terminalEvents = useMemo(() => events.slice(-180), [events]);
 
@@ -463,7 +545,7 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
         </p>
       ) : null}
 
-      {isStoppedRun ? (
+      {showStoppedBanner ? (
         <div className="mt-4 rounded-xl border border-[#fde047] bg-[#fefce8] px-4 py-2 text-sm font-medium text-[#854d0e]">
           Hunt stopped — partial results available below
         </div>
@@ -484,7 +566,9 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
       ) : null}
 
       <div className="mt-5 pb-1">
-        <div className="flex min-w-max items-stretch gap-2 overflow-x-auto pb-1">
+        <div
+          className="agent-pipeline-scroll flex items-stretch gap-2 overflow-x-auto pb-2 snap-x snap-mandatory [scrollbar-color:#e5e7eb_transparent] [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]"
+        >
           {PIPELINE_STAGES.map((stage, index) => {
             const stageData = stageSnapshots[stage.id];
             const hasEvents = stageData.eventCount > 0;
@@ -494,10 +578,10 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
                 (latestAgentIndex === -1 && index === 0 && streamState !== "error"));
             const isComplete =
               hasEvents &&
-              (isStoppedRun ||
+              (hasStoppedState ||
                 (isTerminalRun ? latestAgentIndex >= index || stageData.processed > 0 : latestAgentIndex > index));
 
-            const isCancelled = isStoppedRun && !isComplete;
+            const isCancelled = hasStoppedState && !isComplete;
 
             const phase: StagePhase = isComplete
               ? "complete"
@@ -510,12 +594,12 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
             return (
               <Fragment key={stage.id}>
                 <article
-                  className={`relative w-56 shrink-0 rounded-xl border p-4 transition-all duration-300 sm:w-60 ${stageTone(phase)}`}
+                  className={`relative min-w-40 shrink-0 snap-start rounded-xl border p-3.5 transition-all duration-300 sm:p-4 ${stageTone(phase)}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p
-                        className={`text-base font-semibold ${
+                        className={`text-sm font-semibold sm:text-[15px] ${
                           phase === "complete"
                             ? "text-[#166534]"
                             : phase === "active"
@@ -544,7 +628,7 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
                   </div>
 
                   <p
-                    className={`mt-2 text-xs leading-relaxed ${
+                    className={`mt-2 text-[11px] leading-relaxed ${
                       phase === "complete" ? "text-[#166534]" : "text-[#9ca3af]"
                     }`}
                   >
@@ -577,7 +661,7 @@ export default function AgentPipeline({ jobId }: AgentPipelineProps) {
                 </article>
 
                 {index < PIPELINE_STAGES.length - 1 ? (
-                  <div className="flex items-center justify-center px-1 py-0 text-xl text-[#0066ff]">
+                  <div className="flex min-w-5 shrink-0 items-center justify-center px-1 py-0 text-xl text-[#0066ff]">
                     <span>→</span>
                   </div>
                 ) : null}
