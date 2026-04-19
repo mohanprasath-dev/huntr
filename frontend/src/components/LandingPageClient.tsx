@@ -671,7 +671,7 @@ export default function LandingPage() {
           <div className="space-y-1.5">
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-gray-500">Built by</p>
             <p className="text-lg font-bold text-[#111827]">Mohan Prasath P</p>
-            <p className="text-sm text-[#6b7280]">N25C01A0047 · NIAT X Crescent</p>
+            <p className="text-sm text-[#6b7280]">AI Builder</p>
             <p className="text-xs text-[#9ca3af]">April 2026</p>
             <div className="mt-3 flex flex-wrap items-center justify-center gap-2 md:justify-start">
               <a
@@ -689,6 +689,14 @@ export default function LandingPage() {
                 className="inline-flex rounded-full border border-gray-300 px-3 py-1 text-xs font-medium text-gray-600 transition hover:border-gray-400 hover:text-gray-800"
               >
                 LinkedIn
+              </a>
+              <a
+                href="https://www.mohanprasath.dev"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex rounded-full border border-gray-300 px-3 py-1 text-xs font-medium text-gray-600 transition hover:border-gray-400 hover:text-gray-800"
+              >
+                Portfolio
               </a>
             </div>
           </div>

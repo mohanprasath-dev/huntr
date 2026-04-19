@@ -8,6 +8,19 @@ from tools.serper_tool import SerperTool
 from tools.tavily_tool import TavilyTool
 
 
+def clean_name(name: str) -> str:
+    if not name:
+        return name
+
+    words = name.split()
+    seen: list[str] = []
+    for word in words:
+        if word not in seen:
+            seen.append(word)
+
+    return " ".join(seen)
+
+
 def is_valid_person_name(name: str) -> bool:
     if not name:
         return False
@@ -44,6 +57,21 @@ def is_valid_person_name(name: str) -> bool:
 
     words = normalized_name.split()
     if len(words) < 2:
+        return False
+    if len(words) > 4:
+        return False
+
+    invalid_standalone_words = {
+        "mahavidyalaya",
+        "university",
+        "college",
+        "institute",
+        "community",
+        "lead",
+        "manager",
+    }
+    normalized_words = [re.sub(r"[^A-Za-z-]", "", word).lower() for word in words]
+    if any(word in invalid_standalone_words for word in normalized_words if word):
         return False
 
     if not all(word and word[0].isupper() for word in words):
@@ -249,7 +277,7 @@ class ResearcherAgent:
             domain=company_domain,
         )
         decision_maker_name = str(decision_profile.get("name", "")).strip()
-        decision_maker_name = decision_maker_name.replace("View ", "").strip()
+        decision_maker_name = clean_name(decision_maker_name.replace("View ", "").strip())
         decision_maker_title = str(decision_profile.get("title", "")).strip()
         linkedin_url = str(decision_profile.get("url", "")).strip()
 
@@ -573,7 +601,7 @@ class ResearcherAgent:
             raw_snippet = str(item.get("snippet", "")).strip()
             raw_url = str(item.get("link", "")).strip()
             candidate_name = self._extract_person_name(snippet=raw_snippet, title=raw_title)
-            candidate_name = candidate_name.replace("View ", "").strip()
+            candidate_name = clean_name(candidate_name.replace("View ", "").strip())
             if not is_valid_person_name(candidate_name):
                 continue
 

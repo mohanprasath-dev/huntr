@@ -50,6 +50,12 @@ BLOCKLIST_DOMAINS = {
     "youtube.com",
     "reddit.com",
     "quora.com",
+    "salesforce.com",
+    "scribd.com",
+    "saasboomi.com",
+    "hubspot.com",
+    "zoho.com",
+    "freshworks.com",
 }
 
 
