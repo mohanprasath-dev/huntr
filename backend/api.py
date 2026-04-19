@@ -1125,3 +1125,5 @@ def track_email_open(tracking_id: str) -> Response:
             tracking_data["opened_at"] = _now_iso()
 
     return Response(content=TRACKING_GIF_BYTES, media_type="image/gif")
+
+# cache-bust 20260419223004
