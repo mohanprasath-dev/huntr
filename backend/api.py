@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 import json
+import io
 import os
 import threading
 import time
@@ -42,6 +44,19 @@ MANUAL_COST_PER_QUALIFIED_LEAD_INR = 840
 VS_MANUAL_SUMMARY = (
     "This would take a human 3+ hours of LinkedIn browsing, company research, and writing"
 )
+LEADS_CSV_COLUMNS = [
+    "company",
+    "score",
+    "decision_maker",
+    "pain_point",
+    "email_subject",
+    "email_body",
+    "linkedin_message",
+    "source",
+    "day3_followup",
+    "day7_followup",
+    "day14_followup",
+]
 
 
 def _now_iso() -> str:
@@ -122,6 +137,81 @@ def _job_or_404(job_id: str) -> dict[str, Any]:
         if job is None:
             raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
         return dict(job)
+
+
+def _text(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _lead_followup_for_day(followup_sequence: Any, day: int) -> str:
+    if not isinstance(followup_sequence, list):
+        return ""
+
+    for item in followup_sequence:
+        if not isinstance(item, dict):
+            continue
+        if _to_int(item.get("day")) == day:
+            return _text(item.get("message") or item.get("body") or item.get("text"))
+
+    return ""
+
+
+def _lead_csv_row(lead: dict[str, Any]) -> dict[str, str]:
+    email_draft = lead.get("email_draft") if isinstance(lead.get("email_draft"), dict) else {}
+    followup_sequence = lead.get("followup_sequence")
+
+    return {
+        "company": _text(lead.get("company") or lead.get("company_name")),
+        "score": _text(lead.get("score")),
+        "decision_maker": _text(lead.get("decision_maker")),
+        "pain_point": _text(lead.get("pain_point") or lead.get("pain_signal")),
+        "email_subject": _text(lead.get("email_subject") or email_draft.get("subject")),
+        "email_body": _text(lead.get("email_body") or email_draft.get("body")),
+        "linkedin_message": _text(lead.get("linkedin_message") or lead.get("linkedin_draft")),
+        "source": _text(lead.get("source")),
+        "day3_followup": _text(
+            lead.get("day3_followup") or _lead_followup_for_day(followup_sequence, 3)
+        ),
+        "day7_followup": _text(
+            lead.get("day7_followup") or _lead_followup_for_day(followup_sequence, 7)
+        ),
+        "day14_followup": _text(
+            lead.get("day14_followup") or _lead_followup_for_day(followup_sequence, 14)
+        ),
+    }
+
+
+def _render_leads_csv(leads: list[dict[str, Any]]) -> str:
+    output = io.StringIO(newline="")
+    writer = csv.DictWriter(output, fieldnames=LEADS_CSV_COLUMNS, extrasaction="ignore")
+    writer.writeheader()
+
+    for lead in leads:
+        if isinstance(lead, dict):
+            writer.writerow(_lead_csv_row(lead))
+
+    return output.getvalue()
+
+
+def _get_leads_from_store(job_id: str) -> list[dict[str, Any]]:
+    campaign = get_campaign(job_id)
+    if campaign is not None:
+        campaign_leads = campaign.get("leads")
+        if isinstance(campaign_leads, list):
+            return [lead for lead in campaign_leads if isinstance(lead, dict)]
+
+    with JOBS_LOCK:
+        job = JOBS.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
+        leads = job.get("leads")
+
+    if not isinstance(leads, list):
+        return []
+
+    return [lead for lead in leads if isinstance(lead, dict)]
 
 
 def _build_result_summary(agent: str, action: str, payload: Any) -> str:
@@ -533,6 +623,21 @@ def get_leads(job_id: str) -> JobLeadsResponse:
         job_id=job_id,
         leads=leads,
         impact=JobLeadsResponse.Impact(**impact),
+    )
+
+
+@app.get("/leads/{job_id}/export/csv")
+def export_leads_csv(job_id: str) -> StreamingResponse:
+    leads = _get_leads_from_store(job_id)
+    csv_payload = _render_leads_csv(leads).encode("utf-8")
+
+    return StreamingResponse(
+        iter([csv_payload]),
+        media_type="text/csv",
+        headers={
+            "Content-Type": "text/csv",
+            "Content-Disposition": f'attachment; filename="huntr_{job_id[:8]}_leads.csv"',
+        },
     )
 
 
