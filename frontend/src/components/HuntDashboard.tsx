@@ -297,7 +297,7 @@ export default function HuntDashboard({
 
     try {
       const nextRun = await startHunt(resumeConfig);
-      router.push(`/hunt/${nextRun.job_id}`);
+      router.push(`/app/hunt/${nextRun.job_id}`);
     } catch (error) {
       const detail = error instanceof Error ? error.message : "Unable to resume hunt right now.";
       setResumeError(detail);

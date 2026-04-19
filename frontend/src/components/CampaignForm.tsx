@@ -215,7 +215,7 @@ export default function CampaignForm() {
       };
 
       const response = await startHunt(payload);
-      router.push(`/hunt/${response.job_id}`);
+      router.push(`/app/hunt/${response.job_id}`);
     } catch (submitError) {
       const detail = submitError instanceof Error ? submitError.message : "Failed to start campaign.";
       setError(detail);
@@ -234,7 +234,7 @@ export default function CampaignForm() {
 
     try {
       const response = await startDemoSelfCorrect(DEMO_SELF_CORRECT_PAYLOAD);
-      router.push(`/hunt/${response.job_id}`);
+      router.push(`/app/hunt/${response.job_id}`);
     } catch (submitError) {
       const detail = submitError instanceof Error ? submitError.message : "Failed to run live demo.";
       setError(detail);

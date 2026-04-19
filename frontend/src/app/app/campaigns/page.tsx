@@ -2,42 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 import { getCampaignHistory } from "@/lib/huntr-api";
 import type { CampaignComparison, CampaignSummary } from "@/lib/huntr-types";
-
-function formatTimeAgo(createdAt: string | null | undefined): string {
-  if (!createdAt) {
-    return "unknown";
-  }
-
-  const createdAtDate = new Date(createdAt);
-  const createdAtMs = createdAtDate.getTime();
-  if (Number.isNaN(createdAtMs)) {
-    return "unknown";
-  }
-
-  const deltaSeconds = Math.max(0, Math.floor((Date.now() - createdAtMs) / 1000));
-
-  if (deltaSeconds < 45) {
-    return "just now";
-  }
-  if (deltaSeconds < 3600) {
-    const minutes = Math.max(1, Math.floor(deltaSeconds / 60));
-    return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
-  }
-  if (deltaSeconds < 86400) {
-    const hours = Math.floor(deltaSeconds / 3600);
-    return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-  }
-  if (deltaSeconds < 172800) {
-    return "yesterday";
-  }
-
-  const days = Math.floor(deltaSeconds / 86400);
-  return `${days} day${days === 1 ? "" : "s"} ago`;
-}
 
 function statusBadgeClass(status: string): string {
   if (status === "completed") {
@@ -49,7 +16,28 @@ function statusBadgeClass(status: string): string {
   if (status === "running") {
     return "animate-pulse border-accent/45 bg-accent/20 text-blue-100";
   }
+  if (status === "stopped") {
+    return "border-amber-400/45 bg-amber-500/10 text-amber-100";
+  }
+
   return "border-white/20 bg-white/5 text-white/80";
+}
+
+function formatDate(createdAt: string | null | undefined): string {
+  if (!createdAt) {
+    return "Unknown";
+  }
+
+  const parsed = new Date(createdAt);
+  if (Number.isNaN(parsed.getTime())) {
+    return "Unknown";
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(parsed);
 }
 
 function formatAvgScore(value: number | null): string {
@@ -192,11 +180,10 @@ function ComparisonPanel({
   );
 }
 
-export default function CampaignHistory() {
-  const router = useRouter();
+export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
 
@@ -205,21 +192,18 @@ export default function CampaignHistory() {
 
     const loadCampaigns = async (): Promise<void> => {
       try {
-        const allCampaigns = await getCampaignHistory();
+        const result = await getCampaignHistory(20);
         if (!isMounted) {
           return;
         }
-
-        setCampaigns(Array.isArray(allCampaigns) ? allCampaigns : []);
-        setError("");
-      } catch (loadError) {
+        setCampaigns(Array.isArray(result) ? result.slice(0, 20) : []);
+        setErrorMessage("");
+      } catch (error) {
         if (!isMounted) {
           return;
         }
-
-        const detail =
-          loadError instanceof Error ? loadError.message : "Unable to load campaign history.";
-        setError(detail);
+        const detail = error instanceof Error ? error.message : "Unable to load campaign history.";
+        setErrorMessage(detail);
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -227,30 +211,28 @@ export default function CampaignHistory() {
       }
     };
 
-    loadCampaigns();
+    void loadCampaigns();
 
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const recentCampaigns = useMemo(() => campaigns.slice(0, 3), [campaigns]);
-
   useEffect(() => {
     setSelectedJobIds((current) => {
-      const next = current.filter((jobId) => recentCampaigns.some((campaign) => campaign.job_id === jobId));
+      const next = current.filter((jobId) => campaigns.some((campaign) => campaign.job_id === jobId));
       if (next.length === current.length && next.every((jobId, index) => jobId === current[index])) {
         return current;
       }
       return next.slice(0, 2);
     });
-  }, [recentCampaigns]);
+  }, [campaigns]);
 
   const selectedCampaigns = useMemo(() => {
     return selectedJobIds
-      .map((jobId) => recentCampaigns.find((campaign) => campaign.job_id === jobId))
+      .map((jobId) => campaigns.find((campaign) => campaign.job_id === jobId))
       .filter((campaign): campaign is CampaignSummary => Boolean(campaign));
-  }, [recentCampaigns, selectedJobIds]);
+  }, [campaigns, selectedJobIds]);
 
   const hasAnySelected = selectedCampaigns.length > 0;
   const canCompare = selectedCampaigns.length === 2;
@@ -304,100 +286,156 @@ export default function CampaignHistory() {
 
   const checkboxVisibilityClass = hasAnySelected
     ? "opacity-100"
-    : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100";
-
-  if (isLoading) {
-    return (
-      <div className="flex gap-3 overflow-x-auto pb-2 sm:grid sm:gap-3 sm:overflow-visible sm:pb-0">
-        <div className="h-28 w-[88%] shrink-0 animate-pulse rounded-xl border border-white/10 bg-white/3 sm:w-full sm:shrink" />
-        <div className="h-28 w-[88%] shrink-0 animate-pulse rounded-xl border border-white/10 bg-white/3 sm:w-full sm:shrink" />
-      </div>
-    );
-  }
-
-  if (recentCampaigns.length === 0) {
-    return (
-      <p className="rounded-xl border border-white/10 bg-panel px-4 py-5 text-sm text-muted">
-        No campaigns yet. Start your first hunt above.
-      </p>
-    );
-  }
+    : "opacity-100 md:opacity-0 md:group-hover:opacity-100";
 
   return (
-    <div className="space-y-3">
-      {error ? (
-        <p className="rounded-xl border border-amber-400/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-          {error}
+    <main className="mx-auto min-h-screen w-full max-w-screen-2xl px-4 pb-12 pt-8 md:px-8 md:pt-10">
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-white md:text-5xl">Campaign History</h1>
+          <p className="mt-2 text-sm text-muted md:text-base">All past hunts with outcomes</p>
+        </div>
+
+        <Link
+          href="/app"
+          className="inline-flex items-center justify-center rounded-xl border border-accent/50 bg-accent/10 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:border-accent hover:bg-accent/20 hover:text-white"
+        >
+          New Hunt →
+        </Link>
+      </section>
+
+      {errorMessage ? (
+        <p className="mt-6 rounded-xl border border-amber-400/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          {errorMessage}
         </p>
       ) : null}
 
-      <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:block sm:space-y-3 sm:overflow-visible sm:pb-0">
-        {recentCampaigns.map((campaign) => {
-          const status = String(campaign.status || "unknown").toLowerCase();
-          const leadsFound = Number(campaign.leads_found ?? campaign.leads_count ?? 0);
-          const leadsQualified = Number(campaign.leads_qualified ?? campaign.leads_count ?? 0);
-          const isChecked = selectedJobIds.includes(campaign.job_id);
+      {isLoading ? (
+        <div className="mt-8 rounded-2xl border border-white/10 bg-panel px-6 py-10 text-center">
+          <p className="text-base text-muted">Loading campaigns...</p>
+        </div>
+      ) : campaigns.length === 0 ? (
+        <div className="mt-8 rounded-2xl border border-white/10 bg-panel px-6 py-10 text-center">
+          <p className="text-base text-muted">No campaigns yet. Start your first hunt.</p>
+        </div>
+      ) : (
+        <section className="mt-8 space-y-4">
+          <div className="hidden overflow-hidden rounded-2xl border border-white/10 bg-panel-elevated/60 backdrop-blur md:block">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-white/10 text-left text-xs uppercase tracking-[0.14em] text-muted">
+                  <th className="w-12 px-4 py-3 font-semibold">&nbsp;</th>
+                  <th className="px-4 py-3 font-semibold">Niche</th>
+                  <th className="px-4 py-3 font-semibold">Pain keyword</th>
+                  <th className="px-4 py-3 font-semibold">Leads found / qualified</th>
+                  <th className="px-4 py-3 font-semibold">Avg score</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Date</th>
+                  <th className="px-4 py-3 font-semibold">&nbsp;</th>
+                </tr>
+              </thead>
+              <tbody>
+                {campaigns.map((campaign) => {
+                  const status = String(campaign.status || "unknown").toLowerCase();
+                  const leads = getLeadCounts(campaign);
+                  const avgScore = getAvgScore(campaign);
+                  const isChecked = selectedJobIds.includes(campaign.job_id);
 
-          return (
-            <button
-              key={campaign.job_id}
-              type="button"
-              onClick={() => router.push(`/app/hunt/${campaign.job_id}`)}
-              className="group w-[88%] shrink-0 snap-start rounded-xl border border-white/10 bg-panel px-4 py-3 text-left transition hover:border-accent/40 hover:bg-panel-elevated sm:w-full sm:shrink"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-base font-semibold text-white">{campaign.niche || "Unknown niche"}</p>
-                  <p className="mt-1 text-sm text-muted">
-                    Pain keyword: <span className="text-white/85">{campaign.pain_keyword || "N/A"}</span>
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <label
-                    className={`inline-flex cursor-pointer items-center transition-opacity ${checkboxVisibilityClass}`}
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onClick={(event) => event.stopPropagation()}
-                      onChange={(event) => {
-                        event.stopPropagation();
-                        toggleCampaignSelection(campaign.job_id);
-                      }}
-                      className="h-4 w-4 cursor-pointer rounded border border-[#1e8dff] accent-[#1e8dff]"
-                    />
-                  </label>
-                  <span
-                    className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${statusBadgeClass(status)}`}
-                  >
-                    {status}
-                  </span>
-                </div>
-              </div>
+                  return (
+                    <tr
+                      key={campaign.job_id}
+                      className="group border-b border-white/5 text-sm text-white/90 last:border-b-0"
+                    >
+                      <td className="px-4 py-3">
+                        <label className={`inline-flex cursor-pointer items-center transition-opacity ${checkboxVisibilityClass}`}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleCampaignSelection(campaign.job_id)}
+                            className="h-4 w-4 cursor-pointer rounded border border-[#1e8dff] accent-[#1e8dff]"
+                          />
+                        </label>
+                      </td>
+                      <td className="px-4 py-3 font-medium text-white">{campaign.niche || "Unknown niche"}</td>
+                      <td className="px-4 py-3 text-white/80">{campaign.pain_keyword || "N/A"}</td>
+                      <td className="px-4 py-3 font-medium text-white">
+                        {leads.found} / {leads.qualified}
+                      </td>
+                      <td className="px-4 py-3">{formatAvgScore(avgScore)}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${statusBadgeClass(status)}`}
+                        >
+                          {status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-white/75">{formatDate(campaign.created_at)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <Link
+                          href={`/app/hunt/${campaign.job_id}`}
+                          className="inline-flex items-center font-semibold text-accent transition hover:text-blue-300"
+                        >
+                          View Results →
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-              <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-                <p className="text-white/90">
-                  Leads found: <span className="font-semibold text-white">{leadsFound}</span>
-                </p>
-                <p className="text-white/90">
-                  Qualified: <span className="font-semibold text-white">{leadsQualified}</span>
-                </p>
-                <p className="text-muted">{formatTimeAgo(campaign.created_at ?? null)}</p>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+          <div className="grid gap-3 md:hidden">
+            {campaigns.map((campaign) => {
+              const status = String(campaign.status || "unknown").toLowerCase();
+              const leads = getLeadCounts(campaign);
+              const avgScore = getAvgScore(campaign);
+              const isChecked = selectedJobIds.includes(campaign.job_id);
 
-      <div className="pt-1">
-        <Link
-          href="/app/campaigns"
-          className="inline-flex items-center text-sm font-semibold text-accent transition hover:text-blue-300"
-        >
-          View all →
-        </Link>
-      </div>
+              return (
+                <article key={campaign.job_id} className="group rounded-xl border border-white/10 bg-panel px-4 py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-base font-semibold text-white">{campaign.niche || "Unknown niche"}</h2>
+                      <p className="mt-1 text-sm text-muted">{campaign.pain_keyword || "N/A"}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className={`inline-flex cursor-pointer items-center transition-opacity ${checkboxVisibilityClass}`}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleCampaignSelection(campaign.job_id)}
+                          className="h-4 w-4 cursor-pointer rounded border border-[#1e8dff] accent-[#1e8dff]"
+                        />
+                      </label>
+                      <span
+                        className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${statusBadgeClass(status)}`}
+                      >
+                        {status}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                    <p className="text-white/85">Leads: {leads.found} / {leads.qualified}</p>
+                    <p className="text-white/85">Avg score: {formatAvgScore(avgScore)}</p>
+                    <p className="text-muted">Date: {formatDate(campaign.created_at)}</p>
+                  </div>
+
+                  <div className="mt-3">
+                    <Link
+                      href={`/app/hunt/${campaign.job_id}`}
+                      className="inline-flex items-center text-sm font-semibold text-accent transition hover:text-blue-300"
+                    >
+                      View Results →
+                    </Link>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {canCompare ? (
         <button
@@ -449,6 +487,6 @@ export default function CampaignHistory() {
           </div>
         </div>
       ) : null}
-    </div>
+    </main>
   );
 }

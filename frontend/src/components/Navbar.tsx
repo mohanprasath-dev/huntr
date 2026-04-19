@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { HUNTR_API_BASE_URL } from "@/lib/huntr-api";
 
 function getJobIdFromPath(pathname: string): string | null {
-  const match = pathname.match(/^\/hunt\/([^/]+)\/?$/);
+  const match = pathname.match(/^\/app\/hunt\/([^/]+)\/?$/);
   if (!match) {
     return null;
   }
@@ -61,8 +61,8 @@ export default function Navbar() {
     setIsStopping(false);
   }, [pathname]);
 
-  const isHome = pathname === "/";
-  const isCampaigns = pathname === "/campaigns" || pathname.startsWith("/campaigns/");
+  const isHome = pathname === "/app" || pathname === "/app/";
+  const isCampaigns = pathname === "/app/campaigns" || pathname.startsWith("/app/campaigns/");
 
   async function handleStopHunt(): Promise<void> {
     if (!activeJobId || isStopping) {
@@ -101,17 +101,17 @@ export default function Navbar() {
         aria-label="Primary"
       >
         <Link
-          href="/"
+          href="/app"
           className="font-mono text-xl font-bold tracking-[0.2em] text-[#0066ff] transition hover:text-blue-300"
         >
           HUNTR
         </Link>
 
         <div className="hidden items-center gap-6 md:flex">
-          <Link href="/" className={navLinkClass(isHome)}>
+          <Link href="/app" className={navLinkClass(isHome)}>
             New Hunt
           </Link>
-          <Link href="/campaigns" className={navLinkClass(isCampaigns)}>
+          <Link href="/app/campaigns" className={navLinkClass(isCampaigns)}>
             Campaigns
           </Link>
           {showStopButton ? (
@@ -158,11 +158,11 @@ export default function Navbar() {
       {isMobileOpen ? (
         <div id="mobile-primary-nav" className="border-t border-[#1a1a1a] bg-[#0a0a0a] md:hidden">
           <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 px-4 py-4">
-            <Link href="/" className={navLinkClass(isHome)} onClick={() => setIsMobileOpen(false)}>
+            <Link href="/app" className={navLinkClass(isHome)} onClick={() => setIsMobileOpen(false)}>
               New Hunt
             </Link>
             <Link
-              href="/campaigns"
+              href="/app/campaigns"
               className={navLinkClass(isCampaigns)}
               onClick={() => setIsMobileOpen(false)}
             >
