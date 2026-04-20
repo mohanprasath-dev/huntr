@@ -432,7 +432,13 @@ export default function LandingPage() {
             <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-white p-3">
               <div className="relative overflow-hidden rounded-xl bg-[#0a0a0a] shadow-2xl">
                 <div className="flex h-52 items-center justify-center text-2xl font-medium text-white/90 sm:h-64 md:h-80">
-                  Live Demo
+                  <Image
+                    src="/demo-img.png"
+                    alt="HuntR demo"
+                    width={1200}
+                    height={600}
+                    className="h-full w-auto object-cover"
+                  />
                 </div>
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white via-white/80 to-transparent" />
               </div>
