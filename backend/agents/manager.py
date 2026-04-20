@@ -36,6 +36,7 @@ _GEMINI_PRO_MODEL = "gemini-2.5-pro"
 _MIN_SCOUT_LEADS = 5
 _PRIMARY_SCORE_THRESHOLD = 60
 _FALLBACK_SCORE_THRESHOLD = 50
+_MIN_QUALIFIED_LEADS = 5
 _DEMO_FORCED_SCOUT_RESULTS = 2
 _CONFIG_FIELDS = (
     "niche",
@@ -357,7 +358,7 @@ class HuntRManager:
             },
         )
 
-        if qualified:
+        if len(qualified) >= _MIN_QUALIFIED_LEADS:
             for item in qualified:
                 item["qualified"] = True
             return qualified
@@ -366,7 +367,13 @@ class HuntRManager:
             run_id=run_id,
             step="scorer:self_correction",
             payload={
-                "reason": "no_leads_above_60",
+                "reason": (
+                    "no_leads_above_60"
+                    if len(qualified) == 0
+                    else "insufficient_leads_above_60"
+                ),
+                "qualified_first_pass": len(qualified),
+                "target_min": _MIN_QUALIFIED_LEADS,
                 "fallback_threshold": _FALLBACK_SCORE_THRESHOLD,
             },
         )
@@ -405,7 +412,27 @@ class HuntRManager:
             },
         )
 
-        return fallback_qualified
+        if len(fallback_qualified) >= _MIN_QUALIFIED_LEADS:
+            return fallback_qualified
+
+        ranked = sorted(scored_second_pass, key=lambda lead: int(lead.get("score", 0)), reverse=True)
+        target_count = min(_MIN_QUALIFIED_LEADS, len(ranked))
+        floor_results = ranked[:target_count]
+
+        for item in floor_results:
+            item["qualified"] = int(item.get("score", 0)) >= _FALLBACK_SCORE_THRESHOLD
+
+        self._log_step(
+            run_id=run_id,
+            step="scorer:floor",
+            payload={
+                "reason": "insufficient_fallback_qualified",
+                "target_min": _MIN_QUALIFIED_LEADS,
+                "returned": len(floor_results),
+            },
+        )
+
+        return floor_results
 
     def _attach_sender_profile(self, lead: dict[str, Any], config: Mapping[str, str]) -> dict[str, Any]:
         enriched = dict(lead)
