@@ -218,7 +218,12 @@ def create_job(job_id: str, config: dict[str, Any]) -> dict[str, Any]:
         "impact": {},
         "events": [],
     }
-    collection.document(job_id).set(job_data)
+    try:
+        collection.document(job_id).set(job_data)
+    except Exception as exc:
+        print(f"[Firestore] ERROR creating job {job_id}: {exc}")
+        return {}
+
     return job_data
 
 
@@ -241,7 +246,10 @@ def update_job(job_id: str, updates: dict[str, Any]) -> None:
     if collection is None:
         return
 
-    collection.document(job_id).set(updates, merge=True)
+    try:
+        collection.document(job_id).set(updates, merge=True)
+    except Exception as exc:
+        print(f"[Firestore] ERROR updating job {job_id}: {exc}")
 
 
 def append_job_event(job_id: str, event: dict[str, Any]) -> None:
@@ -250,7 +258,10 @@ def append_job_event(job_id: str, event: dict[str, Any]) -> None:
     if collection is None:
         return
 
-    collection.document(job_id).update({"events": firestore_module.ArrayUnion([event])})
+    try:
+        collection.document(job_id).update({"events": firestore_module.ArrayUnion([event])})
+    except Exception as exc:
+        print(f"[Firestore] ERROR appending event for job {job_id}: {exc}")
 
 
 def set_job_stop(job_id: str) -> None:
@@ -258,13 +269,16 @@ def set_job_stop(job_id: str) -> None:
     if collection is None:
         return
 
-    collection.document(job_id).update(
-        {
-            "stop_requested": True,
-            "status": "stopped",
-            "current_agent": "manager",
-        }
-    )
+    try:
+        collection.document(job_id).update(
+            {
+                "stop_requested": True,
+                "status": "stopped",
+                "current_agent": "manager",
+            }
+        )
+    except Exception as exc:
+        print(f"[Firestore] ERROR stopping job {job_id}: {exc}")
 
 
 def get_job_events(job_id: str, since_index: int = 0) -> list[dict[str, Any]]:
