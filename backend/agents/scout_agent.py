@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from typing import Any
 from urllib.parse import urlparse
@@ -68,6 +69,33 @@ class ScoutAgent:
         max_leads: int = 20,
         pain_keyword: str = "",
     ) -> list[dict[str, Any]]:
+        # Demo-first mode: avoid external API dependencies and return deterministic leads.
+        if os.getenv("HUNTR_FAST_DEMO", "0").strip() == "1":
+            safe_max_leads = max(1, min(max_leads, 50))
+            niche_label = (pain_keyword or niche or "B2B SaaS").strip()
+            base = [
+                ("PipelinePulse", "pipelinepulse.ai"),
+                ("OutboundOps", "outboundops.io"),
+                ("RevStack", "revstackhq.com"),
+                ("SalesSignal", "salessignal.in"),
+                ("InboxFlow", "inboxflow.app"),
+                ("DealDesk", "dealdesk.io"),
+                ("LeadLoom", "leadloomhq.com"),
+            ]
+            leads: list[dict[str, Any]] = []
+            for company, domain in base[:safe_max_leads]:
+                leads.append(
+                    {
+                        "source": "demo",
+                        "url": f"https://{domain}",
+                        "source_url": f"https://{domain}",
+                        "company_name": company,
+                        "contact_hint": "No direct contact found",
+                        "pain_signal": f"Manual outbound is causing {niche_label} pipeline inconsistency and slow follow-ups.",
+                    }
+                )
+            return leads
+
         safe_max_leads = max(1, min(max_leads, 50))
         serper_hits = self._serper_hits(
             niche=niche,

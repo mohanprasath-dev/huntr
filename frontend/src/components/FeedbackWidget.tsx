@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 
-const DEFAULT_API_BASE_URL = "https://huntr-backend-1095027648976.us-central1.run.app";
+const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_HUNTR_API_BASE_URL?.replace(/\/$/, "") ?? DEFAULT_API_BASE_URL;
 
