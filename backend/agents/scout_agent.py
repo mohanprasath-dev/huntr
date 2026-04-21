@@ -86,7 +86,7 @@ class ScoutAgent:
 
             title = str(hit.get("title", "")).strip()
             snippet = str(hit.get("snippet", "")).strip()
-            company_name = self._extract_company_name(url=url)
+            company_name = self._extract_company_name(url=url, title=title)
             contact_hint = self._extract_contact_hint(title=title, snippet=snippet, url=url)
 
             leads.append(
@@ -146,26 +146,23 @@ class ScoutAgent:
         if "site:" in lowered_niche:
             return [niche]
 
+        # Extract core parts and strip location words for cleaner queries.
         safe_niche = niche.strip()
-        safe_pain = pain_keyword.strip() or safe_niche
+        location_words = {"india", "indian", "bangalore", "mumbai", "delhi", "chennai"}
+        niche_words = [w for w in safe_niche.lower().split() if w not in location_words]
+        core_niche = " ".join(niche_words).strip() or safe_niche
+
         raw_queries = [
-            (
-                f'site:linkedin.com/company "{safe_niche}" "B2B" '
-                '"software" "India" founded 2018 2019 2020'
-            ),
-            (
-                f'site:crunchbase.com "{safe_niche}" "India" "startup" '
-                '"Series A" 2023 2024'
-            ),
-            f'site:linkedin.com/company "{safe_niche}" "{safe_pain}" "India"',
-            (
-                f'site:linkedin.com/in "{safe_niche}" "India" '
-                '(Founder OR CEO OR Co-Founder OR CTO)'
-            ),
-            (
-                f'"{safe_niche}" "{safe_pain}" "B2B" "India" '
-                '"startup" "funding"'
-            ),
+            # 1. Find actual company websites first.
+            f'{core_niche} company India site:(.com OR .in OR .io) -site:linkedin.com -site:crunchbase.com',
+            # 2. Crunchbase organization pages often include canonical domains.
+            f'site:crunchbase.com/organization {core_niche} India',
+            # 3. Wellfound startup directory.
+            f'site:wellfound.com/company {core_niche} India',
+            # 4. Company list pages with founding/team signals.
+            f'"{core_niche}" companies India "founded" "CEO" OR "Founder" -linkedin.com/in',
+            # 5. Direct company query with buyer-signal phrases.
+            f'{core_niche} India B2B software startup "our customers" OR "case study" OR "pricing"',
         ]
 
         deduped: list[str] = []
@@ -214,13 +211,35 @@ class ScoutAgent:
             merged.append(item)
         return merged
 
-    def _extract_company_name(self, url: str) -> str:
+    def _extract_company_name(self, url: str, title: str = "") -> str:
+        # Prefer title extraction since directory domains are often generic.
+        if title:
+            clean_title = re.split(
+                r"\s*[\|\-]\s*(Crunchbase|LinkedIn|AngelList|Wellfound|India|Company)",
+                title,
+            )[0].strip()
+            if clean_title and len(clean_title) > 2:
+                return clean_title
+
         root_domain = self._extract_root_domain(url)
+        generic_domains = {
+            "linkedin",
+            "crunchbase",
+            "wellfound",
+            "angellist",
+            "glassdoor",
+            "indeed",
+            "tracxn",
+            "startup",
+            "google",
+        }
         if root_domain:
             domain_head = root_domain.split(".")[0]
-            cleaned_name = re.sub(r"[^A-Za-z0-9]+", " ", domain_head).strip()
-            if cleaned_name:
-                return cleaned_name.title()
+            if domain_head.lower() not in generic_domains:
+                cleaned_name = re.sub(r"[^A-Za-z0-9]+", " ", domain_head).strip()
+                if cleaned_name:
+                    return cleaned_name.title()
+
         return "Unknown Company"
 
     def _extract_root_domain(self, url: str) -> str:
@@ -247,6 +266,10 @@ class ScoutAgent:
         lowered = url.lower()
         if self._is_explicit_company_page(lowered):
             return False
+
+        # Filter person profile pages while keeping company directories.
+        if "linkedin.com/in/" in lowered:
+            return True
 
         if any(term in lowered for term in self._BLOCKED_DOMAIN_TERMS):
             return True

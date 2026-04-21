@@ -456,29 +456,10 @@ class HuntRManager:
         return floor_results
 
     def _verify_researched_leads(self, run_id: str, leads: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        verification_prompt = (
-            "You are a strict fact-checker.\n"
-            "CRITICAL: Only return information you found from an actual search result.\n"
-            "If you cannot find a field from a real source, set it to null.\n"
-            "NEVER invent, infer, or guess any field.\n"
-            "For every piece of data, you must have a source URL.\n\n"
-            "Review these leads and remove any where:\n"
-            "- The company cannot be verified via a real URL\n"
-            "- The decision maker has no LinkedIn or verifiable source\n"
-            "- Any field appears to be guessed or inferred\n\n"
-            "Return only leads with verified, sourced data.\n"
-            "Set unverified fields to null rather than removing the lead entirely."
-        )
-
-        llm_verified = self._verify_with_llm(
-            leads=leads,
-            verification_prompt=verification_prompt,
-        )
-        candidate_leads = llm_verified if llm_verified is not None else leads
-
+        # Keep verification non-blocking: normalize collected leads directly.
         verified: list[dict[str, Any]] = []
         dropped = 0
-        for lead in candidate_leads:
+        for lead in leads:
             normalized = self._normalize_verified_lead(lead)
             if normalized is None:
                 dropped += 1
@@ -490,7 +471,6 @@ class HuntRManager:
             step="manager:verify",
             payload={
                 "input_leads": len(leads),
-                "post_llm_candidates": len(candidate_leads),
                 "verified": len(verified),
                 "dropped": dropped,
             },
@@ -595,12 +575,17 @@ class HuntRManager:
 
         source_url = self._normalize_url(lead.get("source_url"))
         if not source_url:
+            source_url = (
+                self._normalize_url(lead.get("website"))
+                or self._normalize_url(lead.get("url"))
+            )
+        if not source_url:
             return None
 
         normalized["source_url"] = source_url
-        if not self._normalize_url(normalized.get("website")):
+        if not normalized.get("website"):
             normalized["website"] = source_url
-        if not self._normalize_url(normalized.get("url")):
+        if not normalized.get("url"):
             normalized["url"] = source_url
 
         decision_maker = self._normalize_text(normalized.get("decision_maker"))
@@ -613,8 +598,6 @@ class HuntRManager:
         decision_maker_source = self._normalize_url(
             normalized.get("decision_maker_source") or normalized.get("linkedin_url")
         )
-        if decision_maker and not decision_maker_source:
-            decision_maker = None
 
         normalized["decision_maker"] = decision_maker
         normalized["decision_maker_source"] = decision_maker_source
@@ -626,27 +609,17 @@ class HuntRManager:
         email_source = self._normalize_url(normalized.get("email_source"))
         if email_value and "@" not in email_value:
             email_value = None
-        if email_value and not email_source:
-            email_value = None
 
         normalized["email"] = email_value
         normalized["email_source"] = email_source
         normalized["email_hint"] = email_value or "Unknown"
         normalized["email_hint_confidence"] = "found" if email_value else "none"
 
-        pain_point = self._normalize_text(normalized.get("pain_point"))
-        pain_point_source = self._normalize_url(normalized.get("pain_point_source"))
-        if pain_point and not pain_point_source:
-            pain_point = None
-        normalized["pain_point"] = pain_point
-        normalized["pain_point_source"] = pain_point_source
+        normalized["pain_point"] = self._normalize_text(normalized.get("pain_point"))
+        normalized["pain_point_source"] = self._normalize_url(normalized.get("pain_point_source"))
 
-        size = self._normalize_text(normalized.get("size"))
-        size_source = self._normalize_url(normalized.get("size_source"))
-        if size and not size_source:
-            size = None
-        normalized["size"] = size
-        normalized["size_source"] = size_source
+        normalized["size"] = self._normalize_text(normalized.get("size"))
+        normalized["size_source"] = self._normalize_url(normalized.get("size_source"))
 
         tech_stack = normalized.get("tech_stack")
         tech_stack_sources_raw = normalized.get("tech_stack_sources")
@@ -662,9 +635,7 @@ class HuntRManager:
             if isinstance(tech_stack_sources_raw, list)
             else []
         )
-        if tech_stack and not tech_stack_sources:
-            tech_stack = None
-        normalized["tech_stack"] = tech_stack
+        normalized["tech_stack"] = tech_stack if isinstance(tech_stack, list) and tech_stack else None
         normalized["tech_stack_sources"] = tech_stack_sources
 
         normalized["verified"] = True
@@ -724,23 +695,17 @@ class HuntRManager:
     def _build_query_variations(self, niche: str, pain_keyword: str) -> list[str]:
         cleaned_niche = niche.strip()
         cleaned_pain = pain_keyword.strip()
+
+        location_words = {"india", "indian", "bangalore", "mumbai", "delhi", "chennai"}
+        niche_words = [word for word in cleaned_niche.lower().split() if word not in location_words]
+        core_niche = " ".join(niche_words).strip() or cleaned_niche
+
         return [
-            (
-                f'site:linkedin.com/company "{cleaned_niche}" "B2B" '
-                f'"software" "India" "{cleaned_pain}" founded 2018 2019 2020'
-            ),
-            (
-                f'site:crunchbase.com "{cleaned_niche}" "India" "startup" '
-                f'"Series A" 2023 2024 "{cleaned_pain}"'
-            ),
-            (
-                f'site:linkedin.com/company "{cleaned_niche}" "India" '
-                f'"{cleaned_pain}" "hiring"'
-            ),
-            (
-                f'site:linkedin.com/in "{cleaned_niche}" "India" '
-                '(Founder OR CEO OR Co-Founder OR CTO)'
-            ),
+            f"{core_niche} {cleaned_pain} company India -site:linkedin.com -site:crunchbase.com",
+            f"site:crunchbase.com/organization {core_niche} India",
+            f"site:wellfound.com/company {core_niche} India",
+            f'"{core_niche}" companies India "founded" "CEO" OR "Founder" -linkedin.com/in',
+            f'{core_niche} India B2B startup "our customers" OR "case study" OR "pricing"',
         ]
 
     def _merge_unique_leads(

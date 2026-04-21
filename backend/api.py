@@ -800,8 +800,8 @@ def run_demo_self_correct(request: DemoSelfCorrectRequest) -> DemoSelfCorrectRes
     job_id = str(uuid4())
     started_at_epoch = time.time()
     config: dict[str, Any] = {
-        "niche": "automation",
-        "pain_keyword": "x",
+        "niche": "SaaS B2B India",
+        "pain_keyword": "manual outbound sales",
         "sender_name": request.sender_name.strip(),
         "sender_company": request.sender_company.strip(),
         "sender_service": request.sender_service.strip(),
