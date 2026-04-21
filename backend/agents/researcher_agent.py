@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from typing import Any
 from urllib.parse import urlparse
@@ -299,6 +300,60 @@ class ResearcherAgent:
         self.generation_config = {"temperature": 0.1}
 
     def enrich(self, lead: dict[str, Any]) -> dict[str, Any]:
+        # Demo-first mode: keep enrichment fast and non-blocking.
+        # External enrichment is inherently flaky (rate limits, blocked requests, missing API keys).
+        if os.getenv("HUNTR_FAST_DEMO", "1").strip() == "1":
+            company_name = str(
+                lead.get("company_name") or lead.get("company") or "Unknown Company"
+            ).strip() or "Unknown Company"
+            lead_url = str(lead.get("url") or lead.get("source_url") or lead.get("website") or "").strip()
+            domain = self._extract_domain(lead_url)
+            pain_point = str(lead.get("pain_point") or lead.get("pain_signal") or "").strip()
+            if not pain_point:
+                pain_point = "Manual outbound workflow is inconsistent and hard to scale."
+
+            enriched = dict(lead)
+            enriched.update(
+                {
+                    "company": company_name,
+                    "company_name": company_name,
+                    "source_url": lead_url or None,
+                    "website": lead_url or None,
+                    "domain": domain or None,
+                    "size": None,
+                    "size_source": None,
+                    "tech_stack": None,
+                    "tech_stack_sources": [],
+                    "pain_point": pain_point,
+                    "pain_point_source": lead_url or None,
+                    "decision_maker": None,
+                    "decision_maker_title": None,
+                    "decision_maker_source": None,
+                    "email": None,
+                    "email_source": None,
+                    "email_hint": "Unknown",
+                    "email_hint_confidence": "none",
+                    "linkedin_url": None,
+                    "recent_activity": None,
+                    "research": {
+                        "website_results": [],
+                        "linkedin_results": [],
+                        "activity_results": [],
+                        "linkedin_profile_result": {},
+                        "email_results": [],
+                    },
+                    "research_sources": {
+                        "source_url": lead_url or None,
+                        "size_source": None,
+                        "tech_stack_sources": [],
+                        "pain_point_source": lead_url or None,
+                        "decision_maker_source": None,
+                        "email_source": None,
+                    },
+                }
+            )
+            return enriched
+
         company_name = str(lead.get("company_name") or lead.get("company") or "Unknown Company")
         lead_url = str(lead.get("url") or lead.get("website") or "")
         company_site = self._resolve_company_site(company_name=company_name, fallback_url=lead_url)
@@ -310,15 +365,15 @@ class ResearcherAgent:
             if company_domain
             else f"{company_name} company profile team products"
         )
-        website_results = self.tavily_tool.search(query=website_query, max_results=5)
+        website_results = self.tavily_tool.search(query=website_query, max_results=3)
 
         linkedin_query = (
             f"site:linkedin.com {company_name} CEO OR Founder OR CTO OR VP Sales"
         )
-        linkedin_results = self.tavily_tool.search(query=linkedin_query, max_results=5)
+        linkedin_results = self.tavily_tool.search(query=linkedin_query, max_results=3)
 
         activity_query = f"{company_name} funding launch hiring expansion partnership"
-        activity_results = self.tavily_tool.search(query=activity_query, max_results=4)
+        activity_results = self.tavily_tool.search(query=activity_query, max_results=2)
 
         source_url = self._pick_primary_source_url(
             preferred_urls=[company_site, lead_url],

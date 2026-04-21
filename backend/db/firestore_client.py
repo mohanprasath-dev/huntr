@@ -26,7 +26,8 @@ def _create_firestore_client() -> firestore.Client | None:
         return None
 
 
-db = _create_firestore_client()
+_FIRESTORE_ENABLED = os.getenv("FIRESTORE_ENABLED", "").strip() == "1"
+db = _create_firestore_client() if _FIRESTORE_ENABLED else None
 
 
 def test_firestore_connection():

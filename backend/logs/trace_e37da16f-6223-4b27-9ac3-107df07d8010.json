@@ -1,0 +1,45 @@
+[
+  {
+    "timestamp": "2026-04-21T06:46:10.069397+00:00",
+    "run_id": "2e9b078e-979b-4df6-b4bc-432256d5e59a",
+    "step": "manager:start",
+    "payload": {
+      "niche": "B2B SaaS India",
+      "pain_keyword": "manual outbound",
+      "max_leads": 5
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:46:18.742372+00:00",
+    "run_id": "2e9b078e-979b-4df6-b4bc-432256d5e59a",
+    "step": "scout:attempt",
+    "payload": {
+      "attempt": 1,
+      "query": "b2b saas manual outbound company India -site:linkedin.com -site:crunchbase.com",
+      "found": 2,
+      "total_unique": 2
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:46:29.610616+00:00",
+    "run_id": "2e9b078e-979b-4df6-b4bc-432256d5e59a",
+    "step": "scout:retry",
+    "payload": {
+      "attempt": 2,
+      "query": "site:crunchbase.com/organization b2b saas India",
+      "found": 1,
+      "total_unique": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:46:37.982662+00:00",
+    "run_id": "2e9b078e-979b-4df6-b4bc-432256d5e59a",
+    "step": "scout:retry",
+    "payload": {
+      "attempt": 3,
+      "query": "site:wellfound.com/company b2b saas India",
+      "found": 1,
+      "total_unique": 4
+    }
+  }
+]

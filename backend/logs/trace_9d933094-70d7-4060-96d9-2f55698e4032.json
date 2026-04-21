@@ -1,0 +1,272 @@
+[
+  {
+    "timestamp": "2026-04-21T04:37:22.972480+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "manager:start",
+    "payload": {
+      "niche": "AI Services",
+      "pain_keyword": "manual outbound bottlenecks",
+      "max_leads": 20
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:37:25.901570+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "scout:attempt",
+    "payload": {
+      "attempt": 1,
+      "query": "ai services manual outbound bottlenecks company India -site:linkedin.com -site:crunchbase.com",
+      "found": 6,
+      "total_unique": 6
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:37:35.477900+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 1,
+      "company": "Top Bulk AI Calling Company in India - Troika Tech",
+      "domain": "troikatechservices.in"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:37:47.976400+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 2,
+      "company": "Top AI Voice Calling Agent In India",
+      "domain": "voicegenie.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:37:57.238216+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 3,
+      "company": "AI Calling Agents for Faster Lead Qualification - Socialee",
+      "domain": "socialee.in"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:08.601731+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 4,
+      "company": "Voice AI for High-Volume Outbound Calling in Internet Companies ...",
+      "domain": "unleashx.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:21.202854+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 5,
+      "company": "Outbound Debt Collection & Payment Resolution ... - SpeedTech.ai",
+      "domain": "speedtech.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:31.019339+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 6,
+      "company": "Cold Calling Using AI India: 2026 Complete Guide",
+      "domain": "qcall.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:31.419635+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "manager:verify",
+    "payload": {
+      "input_leads": 6,
+      "verified": 6,
+      "dropped": 0
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:35.214420+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 1,
+      "company": "Top Bulk AI Calling Company in India - Troika Tech",
+      "score": 80
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:36.067416+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 2,
+      "company": "Top AI Voice Calling Agent In India",
+      "score": 80
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:37.682801+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 3,
+      "company": "AI Calling Agents for Faster Lead Qualification - Socialee",
+      "score": 90
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:37.684796+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 4,
+      "company": "Voice AI for High-Volume Outbound Calling in Internet Companies ...",
+      "score": 0
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:38.923525+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 5,
+      "company": "Outbound Debt Collection & Payment Resolution ... - SpeedTech.ai",
+      "score": 95
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:41.518922+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 6,
+      "company": "Cold Calling Using AI India: 2026 Complete Guide",
+      "score": 80
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:41.519679+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "scorer:pass",
+    "payload": {
+      "threshold": 60,
+      "qualified": 5,
+      "scored": 6
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:41.863808+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 1,
+      "company": "Top Bulk AI Calling Company in India - Troika Tech"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:42.296430+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 1,
+      "company": "Top Bulk AI Calling Company in India - Troika Tech",
+      "followups": 0
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:44.823730+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 2,
+      "company": "Top AI Voice Calling Agent In India"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:45.173799+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 2,
+      "company": "Top AI Voice Calling Agent In India",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:45.919442+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 3,
+      "company": "AI Calling Agents for Faster Lead Qualification - Socialee"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:46.362746+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 3,
+      "company": "AI Calling Agents for Faster Lead Qualification - Socialee",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:47.206190+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 4,
+      "company": "Outbound Debt Collection & Payment Resolution ... - SpeedTech.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:47.755157+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 4,
+      "company": "Outbound Debt Collection & Payment Resolution ... - SpeedTech.ai",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:48.169366+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 5,
+      "company": "Cold Calling Using AI India: 2026 Complete Guide"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:48.519632+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 5,
+      "company": "Cold Calling Using AI India: 2026 Complete Guide",
+      "followups": 0
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:38:48.909598+00:00",
+    "run_id": "3a178dd7-174c-44ef-bf45-9e1bb09ba404",
+    "step": "manager:complete",
+    "payload": {
+      "returned_leads": 5
+    }
+  }
+]

@@ -75,29 +75,15 @@ class OutreachAgent:
 
     def draft_outreach(self, lead: dict[str, Any]) -> dict[str, Any]:
         company_name = str(lead.get("company_name") or lead.get("company") or "Unknown")
-        pain_point = self._clean_detail(lead.get("pain_point") or "")
+        pain_point = self._clean_detail(lead.get("pain_point") or "") or self._clean_detail(
+            lead.get("pain_signal") or ""
+        )
         if not self._is_usable_pain_point(pain_point):
-            logger.info(
-                "[OutreachAgent] Skipping outreach for %s — pain point insufficient: %r",
-                company_name, pain_point,
-            )
-            skipped = dict(lead)
-            skipped.update(
-                {
-                    "outreach_status": "needs_review",
-                    "outreach_skip_reason": "pain_point_insufficient",
-                    "email_subject": "",
-                    "email_body": "",
-                    "linkedin_message": "",
-                    "email_send_requires_confirmation": False,
-                    "email_send_status": "skipped",
-                    "email_send_prompt": "Outreach skipped due to insufficient pain point quality.",
-                    "has_outreach": False,
-                }
-            )
-            return skipped
+            pain_point = "inconsistent qualified outbound pipeline"
 
         context = self._build_context(lead)
+        context["pain_point"] = pain_point
+        context["pain_focus"] = self._short_phrase(pain_point, max_words=8)
         prompt = self._build_prompt(context)
         generated_text = self._generate_with_gemini(prompt)
         parsed = self._parse_generated_payload(generated_text)
@@ -111,6 +97,8 @@ class OutreachAgent:
                 company_name,
             )
             payload["outreach_status"] = "fallback_used"
+        else:
+            payload["outreach_status"] = "generated"
 
         enriched = dict(lead)
         enriched.update(payload)

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { signOut, useSession } from "next-auth/react";
 import { getJobStatus, stopHunt } from "@/lib/huntr-api";
 
 type HuntLifecycleState = "unknown" | "running" | "stopped" | "completed" | "failed";
@@ -56,7 +55,6 @@ function navLinkClass(isActive: boolean): string {
 export default function Navbar() {
   const pathname = usePathname();
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
-  const { data: session } = useSession();
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
@@ -64,8 +62,8 @@ export default function Navbar() {
   const [stopError, setStopError] = useState<string | null>(null);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
-  const userName = session?.user?.name?.trim() || "User";
-  const userEmail = session?.user?.email?.trim() || "No email";
+  const userName = "Demo User";
+  const userEmail = "demo@huntr.local";
 
   const activeJobId = useMemo(() => getJobIdFromPath(pathname), [pathname]);
   const showStopButton =
@@ -277,16 +275,7 @@ export default function Navbar() {
                 <p className="px-3 py-1.5 text-sm font-medium text-[#111827]">👤 {userName}</p>
                 <p className="px-3 pb-2 text-xs text-[#6b7280]">📧 {userEmail}</p>
                 <div className="my-1 h-px bg-[#e5e7eb]" />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsProfileMenuOpen(false);
-                    void signOut({ callbackUrl: "/" });
-                  }}
-                  className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-[#111827] transition hover:bg-[#f9fafb]"
-                >
-                  Sign out
-                </button>
+                <p className="px-3 py-2 text-xs text-[#6b7280]">Authentication disabled for demo.</p>
               </div>
             ) : null}
           </div>

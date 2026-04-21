@@ -1,0 +1,12 @@
+[
+  {
+    "timestamp": "2026-04-21T05:21:23.767532+00:00",
+    "run_id": "31c14ebc-69a9-439a-bbea-9ee3e6ea2b1d",
+    "step": "manager:start",
+    "payload": {
+      "niche": "AI Services",
+      "pain_keyword": "manual outbound bottlenecks",
+      "max_leads": 20
+    }
+  }
+]

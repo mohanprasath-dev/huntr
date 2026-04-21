@@ -1,0 +1,97 @@
+[
+  {
+    "timestamp": "2026-04-21T05:52:21.971991+00:00",
+    "run_id": "b211963a-84f5-4adb-8e99-dcbdb487090f",
+    "step": "manager:start",
+    "payload": {
+      "niche": "B2B SaaS India",
+      "pain_keyword": "manual outbound",
+      "max_leads": 5
+    }
+  },
+  {
+    "timestamp": "2026-04-21T05:52:24.883083+00:00",
+    "run_id": "b211963a-84f5-4adb-8e99-dcbdb487090f",
+    "step": "scout:attempt",
+    "payload": {
+      "attempt": 1,
+      "query": "b2b saas manual outbound company India -site:linkedin.com -site:crunchbase.com",
+      "found": 4,
+      "total_unique": 4
+    }
+  },
+  {
+    "timestamp": "2026-04-21T05:52:29.550606+00:00",
+    "run_id": "b211963a-84f5-4adb-8e99-dcbdb487090f",
+    "step": "scout:retry",
+    "payload": {
+      "attempt": 2,
+      "query": "site:crunchbase.com/organization b2b saas India",
+      "found": 1,
+      "total_unique": 5
+    }
+  },
+  {
+    "timestamp": "2026-04-21T05:52:32.282459+00:00",
+    "run_id": "b211963a-84f5-4adb-8e99-dcbdb487090f",
+    "step": "scout:retry",
+    "payload": {
+      "attempt": 3,
+      "query": "site:wellfound.com/company b2b saas India",
+      "found": 1,
+      "total_unique": 6
+    }
+  },
+  {
+    "timestamp": "2026-04-21T05:52:46.365666+00:00",
+    "run_id": "b211963a-84f5-4adb-8e99-dcbdb487090f",
+    "step": "scout:retry",
+    "payload": {
+      "attempt": 4,
+      "query": "\"b2b saas\" companies India \"founded\" \"CEO\" OR \"Founder\" -linkedin.com/in",
+      "found": 5,
+      "total_unique": 10
+    }
+  },
+  {
+    "timestamp": "2026-04-21T05:53:01.036318+00:00",
+    "run_id": "b211963a-84f5-4adb-8e99-dcbdb487090f",
+    "step": "scout:retry",
+    "payload": {
+      "attempt": 5,
+      "query": "b2b saas India B2B startup \"our customers\" OR \"case study\" OR \"pricing\"",
+      "found": 5,
+      "total_unique": 14
+    }
+  },
+  {
+    "timestamp": "2026-04-21T05:53:41.460102+00:00",
+    "run_id": "b211963a-84f5-4adb-8e99-dcbdb487090f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 1,
+      "company": "Top Sales Outsourcing Companies in India - Apr 2026 Rankings",
+      "domain": "clutch.co"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T05:54:31.632858+00:00",
+    "run_id": "b211963a-84f5-4adb-8e99-dcbdb487090f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 2,
+      "company": "Outbound Sales AI Agent for B2B SaaS Lead Generation \u2013 2.5x ...",
+      "domain": "unleashx.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T05:55:08.552076+00:00",
+    "run_id": "b211963a-84f5-4adb-8e99-dcbdb487090f",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 3,
+      "company": "TOP Cold Call Agencies in India - Saleshandy",
+      "domain": "saleshandy.com"
+    }
+  }
+]

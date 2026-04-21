@@ -673,6 +673,38 @@ class HuntRManager:
             return candidate
         return None
 
+    def _extract_root_domain(self, url: str) -> str:
+        """Return a stable domain key for deduping leads.
+
+        This intentionally favors robustness over perfect PSL handling.
+        """
+        if not url:
+            return ""
+
+        candidate = url.strip().lower()
+        if not candidate:
+            return ""
+
+        parsed = urlparse(candidate if "://" in candidate else f"https://{candidate}")
+        host = (parsed.netloc or "").split("@")[-1]
+        host = host.split(":")[0].strip(".")
+        if not host:
+            return ""
+
+        if host.startswith("www."):
+            host = host[4:]
+
+        parts = [p for p in host.split(".") if p]
+        if len(parts) <= 2:
+            return host
+
+        # Heuristic for common second-level TLDs (e.g., co.in, com.au).
+        second_level_tlds = {"co", "com", "org", "net", "gov", "ac"}
+        if parts[-2] in second_level_tlds and len(parts) >= 3:
+            return ".".join(parts[-3:])
+
+        return ".".join(parts[-2:])
+
     def _coerce_model_text(self, response: Any) -> str:
         if response is None:
             return ""

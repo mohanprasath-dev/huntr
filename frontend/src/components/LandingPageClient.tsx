@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { signIn, signOut, useSession } from "next-auth/react";
 
 const AGENT_CARDS = [
   {
@@ -145,8 +144,6 @@ export default function LandingPage() {
   const impactRef = useRef<HTMLElement | null>(null);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
-  const { data: session } = useSession();
-
   const [navbarBlurred, setNavbarBlurred] = useState(false);
   const [heroReady, setHeroReady] = useState(false);
   const [cardsVisible, setCardsVisible] = useState(false);
@@ -154,8 +151,8 @@ export default function LandingPage() {
   const [impactValues, setImpactValues] = useState([0, 0, 0, 0]);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
-  const userName = session?.user?.name?.trim() || "User";
-  const userImage = session?.user?.image?.trim() || "";
+  const userName = "Demo User";
+  const userImage = "";
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -301,88 +298,49 @@ export default function LandingPage() {
             >
               Build Story
             </Link>
-            {session ? (
-              <div className="relative" ref={profileMenuRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsProfileMenuOpen((value) => !value)}
-                  className="inline-flex items-center gap-2 rounded-full border border-gray-300 px-2.5 py-1.5 text-sm font-medium text-gray-700 transition hover:border-gray-400 hover:text-black"
+            <div className="relative" ref={profileMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsProfileMenuOpen((value) => !value)}
+                className="inline-flex items-center gap-2 rounded-full border border-gray-300 px-2.5 py-1.5 text-sm font-medium text-gray-700 transition hover:border-gray-400 hover:text-black"
+              >
+                <span
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black text-white"
+                  aria-hidden="true"
                 >
-                  {userImage ? (
-                    <Image
-                      src={userImage}
-                      alt={userName}
-                      width={32}
-                      height={32}
-                      className="h-8 w-8 rounded-full object-cover"
+                  <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+                    <circle cx="12" cy="8" r="3" stroke="currentColor" strokeWidth="1.8" />
+                    <path
+                      d="M6.5 18c.6-2.5 2.8-4 5.5-4s4.9 1.5 5.5 4"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
                     />
-                  ) : (
-                    <span
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black text-white"
-                      aria-hidden="true"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
-                        <circle cx="12" cy="8" r="3" stroke="currentColor" strokeWidth="1.8" />
-                        <path
-                          d="M6.5 18c.6-2.5 2.8-4 5.5-4s4.9 1.5 5.5 4"
-                          stroke="currentColor"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    </span>
-                  )}
-                  <span className="hidden sm:inline">{userName}</span>
-                </button>
-
-                {isProfileMenuOpen ? (
-                  <div className="absolute right-0 top-12 min-w-44 rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
-                    <Link
-                      href="/app"
-                      className="block rounded-lg px-3 py-2 text-sm font-medium text-[#111827] transition hover:bg-[#f9fafb]"
-                      onClick={() => setIsProfileMenuOpen(false)}
-                    >
-                      Go to app
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsProfileMenuOpen(false);
-                        void signOut({ callbackUrl: "/" });
-                      }}
-                      className="mt-1 block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-[#111827] transition hover:bg-[#f9fafb]"
-                    >
-                      Sign out
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void signIn("google")}
-                className="inline-flex items-center rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-gray-400 hover:text-black"
-              >
-                Sign in
+                  </svg>
+                </span>
+                <span className="hidden sm:inline">{userName}</span>
               </button>
-            )}
 
-            {session ? (
-              <Link
-                href="/app"
-                className="inline-flex items-center rounded-full bg-black px-5 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
-              >
-                Go to app →
-              </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void signIn("google")}
-                className="inline-flex items-center rounded-full bg-black px-5 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
-              >
-                Start for free →
-              </button>
-            )}
+              {isProfileMenuOpen ? (
+                <div className="absolute right-0 top-12 min-w-44 rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
+                  <Link
+                    href="/app"
+                    className="block rounded-lg px-3 py-2 text-sm font-medium text-[#111827] transition hover:bg-[#f9fafb]"
+                    onClick={() => setIsProfileMenuOpen(false)}
+                  >
+                    Go to app
+                  </Link>
+                  <p className="px-3 py-2 text-xs text-[#6b7280]">Authentication disabled for demo.</p>
+                </div>
+              ) : null}
+            </div>
+
+            <Link
+              href="/app"
+              className="inline-flex items-center rounded-full bg-black px-5 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+            >
+              Go to app →
+            </Link>
           </div>
         </div>
       </header>

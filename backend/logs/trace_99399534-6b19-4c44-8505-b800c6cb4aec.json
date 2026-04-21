@@ -1,0 +1,73 @@
+[
+  {
+    "timestamp": "2026-04-21T05:47:11.120719+00:00",
+    "run_id": "93ef3486-4c9d-4017-9667-56a7552c4679",
+    "step": "manager:start",
+    "payload": {
+      "niche": "B2B SaaS India",
+      "pain_keyword": "manual outbound",
+      "max_leads": 20
+    }
+  },
+  {
+    "timestamp": "2026-04-21T05:47:14.021130+00:00",
+    "run_id": "93ef3486-4c9d-4017-9667-56a7552c4679",
+    "step": "scout:attempt",
+    "payload": {
+      "attempt": 1,
+      "query": "b2b saas manual outbound company India -site:linkedin.com -site:crunchbase.com",
+      "found": 6,
+      "total_unique": 6
+    }
+  },
+  {
+    "timestamp": "2026-04-21T05:47:55.979380+00:00",
+    "run_id": "93ef3486-4c9d-4017-9667-56a7552c4679",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 1,
+      "company": "Top Sales Outsourcing Companies in India - Apr 2026 Rankings",
+      "domain": "clutch.co"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T05:48:42.496752+00:00",
+    "run_id": "93ef3486-4c9d-4017-9667-56a7552c4679",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 2,
+      "company": "List Of Lead Generation Companies In India - BizKonnect",
+      "domain": "bizkonnect.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T05:49:29.545279+00:00",
+    "run_id": "93ef3486-4c9d-4017-9667-56a7552c4679",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 3,
+      "company": "Outbound Sales AI Agent for B2B SaaS Lead Generation \u2013 2.5x ...",
+      "domain": "unleashx.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T05:50:10.375946+00:00",
+    "run_id": "93ef3486-4c9d-4017-9667-56a7552c4679",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 4,
+      "company": "Top 10 Lead Generation Agencies in India: 2025 Guide - Manyreach",
+      "domain": "manyreach.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T05:50:57.067558+00:00",
+    "run_id": "93ef3486-4c9d-4017-9667-56a7552c4679",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 5,
+      "company": "TOP Cold Call Agencies in India - Saleshandy",
+      "domain": "saleshandy.com"
+    }
+  }
+]

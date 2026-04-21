@@ -46,7 +46,8 @@ from db.firestore_client import CAMPAIGNS_COLLECTION, db, test_firestore_connect
 from tools.email_tool import BrevoEmailTool
 
 load_dotenv()
-test_firestore_connection()
+if os.getenv("FIRESTORE_TEST_ON_STARTUP", "").strip() == "1":
+    test_firestore_connection()
 
 app = FastAPI(title="HuntR API", version="0.1.0")
 email_tool = BrevoEmailTool()
@@ -461,7 +462,12 @@ def _run_hunt_job(job_id: str, config: dict[str, Any]) -> None:
 
     def _invoke_run_huntr() -> None:
         try:
-            result_box["leads"] = manager.run_huntr(config=config, max_leads=20, job_id=job_id)
+            max_leads_env = os.getenv("HUNTR_MAX_LEADS", "").strip()
+            try:
+                max_leads = int(max_leads_env) if max_leads_env else 5
+            except ValueError:
+                max_leads = 5
+            result_box["leads"] = manager.run_huntr(config=config, max_leads=max_leads, job_id=job_id)
         except Exception as exc:  # pragma: no cover - network/credentials sensitive path
             error_box["error"] = str(exc)
 
@@ -643,6 +649,7 @@ class JobStatusResponse(BaseModel):
     leads_found: int
     leads_scored: int
     steps_completed: int
+    error: str | None = None
 
 
 class JobLeadsResponse(BaseModel):
@@ -860,6 +867,7 @@ def get_status(job_id: str) -> JobStatusResponse:
             leads_found=max(0, int(leads_found)),
             leads_scored=max(0, int(leads_scored)),
             steps_completed=len(trace_events),
+            error=str(campaign.get("error")) if campaign.get("error") is not None else None,
         )
 
     return JobStatusResponse(
@@ -869,6 +877,7 @@ def get_status(job_id: str) -> JobStatusResponse:
         leads_found=int(job.get("leads_found", 0)),
         leads_scored=int(job.get("leads_scored", 0)),
         steps_completed=int(job.get("steps_completed", 0)),
+        error=str(job.get("error")) if job.get("error") is not None else None,
     )
 
 

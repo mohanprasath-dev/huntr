@@ -1,0 +1,12 @@
+[
+  {
+    "timestamp": "2026-04-21T05:25:03.767076+00:00",
+    "run_id": "d173542e-643d-42ca-82d2-660e45f7c312",
+    "step": "manager:start",
+    "payload": {
+      "niche": "plumbers in texas",
+      "pain_keyword": "leads",
+      "max_leads": 20
+    }
+  }
+]

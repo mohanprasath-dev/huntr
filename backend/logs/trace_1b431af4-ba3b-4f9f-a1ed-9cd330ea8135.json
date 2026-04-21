@@ -1,0 +1,373 @@
+[
+  {
+    "timestamp": "2026-04-21T04:19:22.600107+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "manager:start",
+    "payload": {
+      "niche": "AI Services",
+      "pain_keyword": "manual outbound bottlenecks",
+      "max_leads": 20
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:19:24.507037+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "scout:attempt",
+    "payload": {
+      "attempt": 1,
+      "query": "ai services manual outbound bottlenecks company India -site:linkedin.com -site:crunchbase.com",
+      "found": 9,
+      "total_unique": 9
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:19:34.807357+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 1,
+      "company": "Automotive AI Agents for Sales & Service Workflow Automation",
+      "domain": "unleashx.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:19:48.971516+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 2,
+      "company": "Top Bulk AI Calling Company in India - Troika Tech",
+      "domain": "troikatechservices.in"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:20:03.056052+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 3,
+      "company": "AI Calling Agents for Faster Lead Qualification - Socialee",
+      "domain": "socialee.in"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:20:15.198037+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 4,
+      "company": "Cold Calling Using AI India: 2026 Complete Guide",
+      "domain": "qcall.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:20:24.351341+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 5,
+      "company": "Automating Outbound Engagement with AI-Powered CTI Ninja",
+      "domain": "ksolves.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:20:33.987669+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 6,
+      "company": "Top AI Voice Calling Agent In India",
+      "domain": "voicegenie.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:20:42.729952+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 7,
+      "company": "SmartCall | AI Voice Agent for Enterprise Call Automation - LuMay.ai",
+      "domain": "lumay.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:20:52.303204+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 8,
+      "company": "Case Studies | Sash Ai",
+      "domain": "sashai.tech"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:04.410764+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 9,
+      "company": "Best AI Agents in 2026: Real Business Use Cases & Examples",
+      "domain": "omniagent.net.in"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:04.768153+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "manager:verify",
+    "payload": {
+      "input_leads": 9,
+      "verified": 9,
+      "dropped": 0
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:05.125508+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 1,
+      "company": "Automotive AI Agents for Sales & Service Workflow Automation",
+      "score": 0
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:08.148752+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 2,
+      "company": "Top Bulk AI Calling Company in India - Troika Tech",
+      "score": 80
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:08.525358+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 3,
+      "company": "AI Calling Agents for Faster Lead Qualification - Socialee",
+      "score": 90
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:10.620786+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 4,
+      "company": "Cold Calling Using AI India: 2026 Complete Guide",
+      "score": 80
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:12.754134+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 5,
+      "company": "Automating Outbound Engagement with AI-Powered CTI Ninja",
+      "score": 65
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:13.736538+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 6,
+      "company": "Top AI Voice Calling Agent In India",
+      "score": 80
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:14.050551+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 7,
+      "company": "SmartCall | AI Voice Agent for Enterprise Call Automation - LuMay.ai",
+      "score": 100
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:18.225208+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 8,
+      "company": "Case Studies | Sash Ai",
+      "score": 40
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:19.780404+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 9,
+      "company": "Best AI Agents in 2026: Real Business Use Cases & Examples",
+      "score": 75
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:19.782499+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "scorer:pass",
+    "payload": {
+      "threshold": 60,
+      "qualified": 7,
+      "scored": 9
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:20.165759+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 1,
+      "company": "Top Bulk AI Calling Company in India - Troika Tech"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:20.815270+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 1,
+      "company": "Top Bulk AI Calling Company in India - Troika Tech",
+      "followups": 0
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:24.185164+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 2,
+      "company": "AI Calling Agents for Faster Lead Qualification - Socialee"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:24.851073+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 2,
+      "company": "AI Calling Agents for Faster Lead Qualification - Socialee",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:25.234103+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 3,
+      "company": "Cold Calling Using AI India: 2026 Complete Guide"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:25.889253+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 3,
+      "company": "Cold Calling Using AI India: 2026 Complete Guide",
+      "followups": 0
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:26.707903+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 4,
+      "company": "Automating Outbound Engagement with AI-Powered CTI Ninja"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:27.335840+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 4,
+      "company": "Automating Outbound Engagement with AI-Powered CTI Ninja",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:28.723135+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 5,
+      "company": "Top AI Voice Calling Agent In India"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:29.107715+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 5,
+      "company": "Top AI Voice Calling Agent In India",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:29.858210+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 6,
+      "company": "SmartCall | AI Voice Agent for Enterprise Call Automation - LuMay.ai"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:30.528991+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 6,
+      "company": "SmartCall | AI Voice Agent for Enterprise Call Automation - LuMay.ai",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:30.909230+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 7,
+      "company": "Best AI Agents in 2026: Real Business Use Cases & Examples"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:31.294857+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 7,
+      "company": "Best AI Agents in 2026: Real Business Use Cases & Examples",
+      "followups": 0
+    }
+  },
+  {
+    "timestamp": "2026-04-21T04:21:31.679001+00:00",
+    "run_id": "739d6f31-a49d-4ce3-a2b7-c8d744d435f0",
+    "step": "manager:complete",
+    "payload": {
+      "returned_leads": 7
+    }
+  }
+]

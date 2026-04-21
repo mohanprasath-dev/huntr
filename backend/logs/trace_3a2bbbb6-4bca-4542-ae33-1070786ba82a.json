@@ -1,0 +1,299 @@
+[
+  {
+    "timestamp": "2026-04-21T06:04:01.563765+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "manager:start",
+    "payload": {
+      "niche": "B2B SaaS India",
+      "pain_keyword": "manual outbound",
+      "max_leads": 5
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:03.713215+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "scout:attempt",
+    "payload": {
+      "attempt": 1,
+      "query": "b2b saas manual outbound company India -site:linkedin.com -site:crunchbase.com",
+      "found": 2,
+      "total_unique": 2
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:06.027301+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "scout:retry",
+    "payload": {
+      "attempt": 2,
+      "query": "site:crunchbase.com/organization b2b saas India",
+      "found": 1,
+      "total_unique": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:08.014682+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "scout:retry",
+    "payload": {
+      "attempt": 3,
+      "query": "site:wellfound.com/company b2b saas India",
+      "found": 1,
+      "total_unique": 4
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:21.801480+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "scout:retry",
+    "payload": {
+      "attempt": 4,
+      "query": "\"b2b saas\" companies India \"founded\" \"CEO\" OR \"Founder\" -linkedin.com/in",
+      "found": 5,
+      "total_unique": 8
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:38.336326+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "scout:retry",
+    "payload": {
+      "attempt": 5,
+      "query": "b2b saas India B2B startup \"our customers\" OR \"case study\" OR \"pricing\"",
+      "found": 5,
+      "total_unique": 13
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:38.338186+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 1,
+      "company": "Top Sales Outsourcing Companies in India - Apr 2026 Rankings",
+      "domain": "clutch.co"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:38.359221+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 2,
+      "company": "List Of Lead Generation Companies In India - BizKonnect",
+      "domain": "bizkonnect.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:38.385142+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 3,
+      "company": "GrowthSpree",
+      "domain": "crunchbase.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:38.409830+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 4,
+      "company": "atEaseAI: Founder, Leadership & Team",
+      "domain": "wellfound.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:38.434891+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "researcher:enrich",
+    "payload": {
+      "lead_index": 5,
+      "company": "5 Indian B2B SaaS Companies to Watch - Paul Writer",
+      "domain": "paulwriter.com"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:38.460400+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "manager:verify",
+    "payload": {
+      "input_leads": 5,
+      "verified": 5,
+      "dropped": 0
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:38.485569+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 1,
+      "company": "Top Sales Outsourcing Companies in India - Apr 2026 Rankings",
+      "score": 0
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:38.511700+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 2,
+      "company": "List Of Lead Generation Companies In India - BizKonnect",
+      "score": 70
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:38.533854+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 3,
+      "company": "GrowthSpree",
+      "score": 0
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:38.558594+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 4,
+      "company": "atEaseAI: Founder, Leadership & Team",
+      "score": 0
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:38.578341+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "scorer:score",
+    "payload": {
+      "pass": 1,
+      "lead_index": 5,
+      "company": "5 Indian B2B SaaS Companies to Watch - Paul Writer",
+      "score": 55
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:38.596793+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "scorer:pass",
+    "payload": {
+      "threshold": 60,
+      "qualified": 1,
+      "scored": 5
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:38.615417+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "scorer:self_correction",
+    "payload": {
+      "reason": "insufficient_leads_above_60",
+      "qualified_first_pass": 1,
+      "target_min": 5,
+      "fallback_threshold": 50
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:38.640870+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "scorer:retry",
+    "payload": {
+      "threshold": 50,
+      "qualified": 2,
+      "scored": 5
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:38.664020+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "scorer:floor",
+    "payload": {
+      "reason": "insufficient_fallback_qualified",
+      "target_min": 5,
+      "returned": 5
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:46.887740+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 1,
+      "company": "List Of Lead Generation Companies In India - BizKonnect"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:46.889667+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 1,
+      "company": "List Of Lead Generation Companies In India - BizKonnect",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:53.363920+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 2,
+      "company": "5 Indian B2B SaaS Companies to Watch - Paul Writer"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:04:53.366015+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 2,
+      "company": "5 Indian B2B SaaS Companies to Watch - Paul Writer",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:05:00.031255+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 3,
+      "company": "Top Sales Outsourcing Companies in India - Apr 2026 Rankings"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:05:00.033013+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 3,
+      "company": "Top Sales Outsourcing Companies in India - Apr 2026 Rankings",
+      "followups": 3
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:05:06.392765+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "outreach:draft",
+    "payload": {
+      "lead_index": 4,
+      "company": "GrowthSpree"
+    }
+  },
+  {
+    "timestamp": "2026-04-21T06:05:06.394534+00:00",
+    "run_id": "4d9c6993-2b60-4352-a152-6fa0d0ebcbef",
+    "step": "followup:build_sequence",
+    "payload": {
+      "lead_index": 4,
+      "company": "GrowthSpree",
+      "followups": 3
+    }
+  }
+]
