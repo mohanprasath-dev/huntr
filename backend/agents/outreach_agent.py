@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
+import time
 from typing import Any
 
 try:
@@ -11,6 +13,8 @@ try:
 except Exception:  # pragma: no cover - optional dependency at scaffold time
     genai = None
     GenerateContentConfig = None
+
+logger = logging.getLogger(__name__)
 
 
 def get_greeting(decision_maker: str, company: str) -> str:
@@ -70,8 +74,13 @@ class OutreachAgent:
         self.client = self._build_client()
 
     def draft_outreach(self, lead: dict[str, Any]) -> dict[str, Any]:
+        company_name = str(lead.get("company_name") or lead.get("company") or "Unknown")
         pain_point = self._clean_detail(lead.get("pain_point") or "")
         if not self._is_usable_pain_point(pain_point):
+            logger.info(
+                "[OutreachAgent] Skipping outreach for %s — pain point insufficient: %r",
+                company_name, pain_point,
+            )
             skipped = dict(lead)
             skipped.update(
                 {
@@ -83,6 +92,7 @@ class OutreachAgent:
                     "email_send_requires_confirmation": False,
                     "email_send_status": "skipped",
                     "email_send_prompt": "Outreach skipped due to insufficient pain point quality.",
+                    "has_outreach": False,
                 }
             )
             return skipped
@@ -93,6 +103,14 @@ class OutreachAgent:
         parsed = self._parse_generated_payload(generated_text)
         payload = self._build_payload(context=context, generated=parsed)
         payload.update(self._build_confirmation_payload(context=context, lead=lead))
+        payload["has_outreach"] = bool(payload.get("email_body") or payload.get("linkedin_message"))
+
+        if not generated_text:
+            logger.warning(
+                "[OutreachAgent] Gemini generation failed for %s — using fallback templates",
+                company_name,
+            )
+            payload["outreach_status"] = "fallback_used"
 
         enriched = dict(lead)
         enriched.update(payload)
@@ -188,41 +206,66 @@ class OutreachAgent:
             f"Lead facts JSON:\n{lead_payload}"
         )
 
-    def _generate_with_gemini(self, prompt: str) -> str:
+    def _generate_with_gemini(self, prompt: str, max_retries: int = 2) -> str:
         if self.client is None:
+            logger.warning(
+                "[OutreachAgent] Gemini client not initialized — outreach will use fallback templates"
+            )
             return ""
 
-        try:
-            if GenerateContentConfig is not None:
-                response = self.client.models.generate_content(
-                    model=self.model,
-                    contents=prompt,
-                    config=GenerateContentConfig(
-                        temperature=0.35,
-                        max_output_tokens=420,
-                    ),
+        last_exc: Exception | None = None
+        for attempt in range(max_retries + 1):
+            try:
+                if GenerateContentConfig is not None:
+                    response = self.client.models.generate_content(
+                        model=self.model,
+                        contents=prompt,
+                        config=GenerateContentConfig(
+                            temperature=0.35,
+                            # Increased from 420 — short JSON can get truncated at 420 tokens
+                            max_output_tokens=512,
+                        ),
+                    )
+                else:
+                    response = self.client.models.generate_content(
+                        model=self.model,
+                        contents=prompt,
+                    )
+
+                text = getattr(response, "text", "")
+                if isinstance(text, str) and text.strip():
+                    return text.strip()
+
+                # Candidates fallback
+                for candidate in getattr(response, "candidates", []):
+                    content = getattr(candidate, "content", None)
+                    parts = getattr(content, "parts", []) if content else []
+                    for part in parts:
+                        part_text = getattr(part, "text", "")
+                        if isinstance(part_text, str) and part_text.strip():
+                            return part_text.strip()
+
+                logger.warning(
+                    "[OutreachAgent] Empty response from Gemini on attempt %d/%d",
+                    attempt + 1, max_retries + 1,
                 )
-            else:
-                response = self.client.models.generate_content(
-                    model=self.model,
-                    contents=prompt,
+
+            except Exception as exc:
+                last_exc = exc
+                logger.warning(
+                    "[OutreachAgent] Generation failed (attempt %d/%d): %s",
+                    attempt + 1, max_retries + 1, exc,
                 )
-        except Exception:
-            return ""
+                if attempt < max_retries:
+                    wait = 1.5 * (attempt + 1)
+                    logger.info("[OutreachAgent] Retrying in %.1fs...", wait)
+                    time.sleep(wait)
 
-        text = getattr(response, "text", "")
-        if isinstance(text, str) and text.strip():
-            return text.strip()
-
-        candidates = getattr(response, "candidates", [])
-        for candidate in candidates:
-            content = getattr(candidate, "content", None)
-            parts = getattr(content, "parts", []) if content else []
-            for part in parts:
-                part_text = getattr(part, "text", "")
-                if isinstance(part_text, str) and part_text.strip():
-                    return part_text.strip()
-
+        if last_exc is not None:
+            logger.error(
+                "[OutreachAgent] All %d generation attempts failed. Last error: %s",
+                max_retries + 1, last_exc,
+            )
         return ""
 
     def _build_context(self, lead: dict[str, Any]) -> dict[str, str]:

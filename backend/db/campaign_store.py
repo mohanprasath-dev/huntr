@@ -1,14 +1,27 @@
 from __future__ import annotations
 
-from datetime import datetime
+import logging
+import threading
+from datetime import datetime, timezone
 from typing import Any
 
 from google.cloud import firestore as firestore_module
 
 from db.firestore_client import CAMPAIGNS_COLLECTION, db
 
+logger = logging.getLogger(__name__)
 
 JOBS_COLLECTION = "huntr_jobs"
+
+# ─── In-memory fallback store (used when Firestore is unavailable) ─────────────
+_memory_jobs: dict[str, dict[str, Any]] = {}
+_memory_jobs_lock = threading.Lock()
+_memory_campaigns: dict[str, dict[str, Any]] = {}
+_memory_campaigns_lock = threading.Lock()
+
+
+def _now_iso() -> str:
+    return datetime.now(tz=timezone.utc).isoformat()
 
 
 def _to_iso8601(value: Any) -> str | None:
@@ -53,6 +66,8 @@ def _jobs_collection() -> firestore_module.CollectionReference | None:
     return db.collection(JOBS_COLLECTION)
 
 
+# ─── Campaign functions ────────────────────────────────────────────────────────
+
 def save_campaign(
     job_id: str,
     config: dict[str, Any],
@@ -63,10 +78,19 @@ def save_campaign(
 ) -> None:
     collection = _collection()
     if collection is None:
-        print(f"[Firestore] Skipping save for campaign {job_id}: client unavailable")
+        logger.warning("[Firestore] Skipping save for campaign %s: client unavailable — saving in-memory", job_id)
+        with _memory_campaigns_lock:
+            _memory_campaigns[job_id] = {
+                "job_id": job_id, "config": config, "status": status, "leads": leads,
+                "impact": impact, "trace": trace,
+                "niche": str(config.get("niche", "")),
+                "pain_keyword": str(config.get("pain_keyword", "")),
+                "leads_count": len(leads),
+                "created_at": _now_iso(), "updated_at": _now_iso(),
+            }
         return
 
-    print(f"[Firestore] Saving campaign {job_id}")
+    logger.info("[Firestore] Saving campaign %s (%d leads)", job_id, len(leads))
 
     try:
         doc_ref = collection.document(job_id)
@@ -90,20 +114,26 @@ def save_campaign(
             },
             merge=True,
         )
-        print(f"[Firestore] Campaign {job_id} saved successfully")
+        logger.info("[Firestore] Campaign %s saved successfully", job_id)
     except Exception as exc:
-        print(f"[Firestore] ERROR saving campaign {job_id}: {exc}")
+        logger.error("[Firestore] ERROR saving campaign %s: %s", job_id, exc)
         raise
 
 
 def get_campaign(job_id: str) -> dict[str, Any] | None:
+    # Check in-memory first
+    with _memory_campaigns_lock:
+        if job_id in _memory_campaigns:
+            return dict(_memory_campaigns[job_id])
+
     collection = _collection()
     if collection is None:
         return None
 
     try:
         snapshot = collection.document(job_id).get()
-    except Exception:
+    except Exception as exc:
+        logger.warning("[Firestore] ERROR fetching campaign %s: %s", job_id, exc)
         return None
 
     if not snapshot.exists:
@@ -123,8 +153,11 @@ def get_campaign(job_id: str) -> dict[str, Any] | None:
 def list_campaigns(limit: int = 10) -> list[dict[str, Any]]:
     collection = _collection()
     if collection is None:
-        print("[Firestore] list_campaigns skipped: client unavailable")
-        return []
+        logger.warning("[Firestore] list_campaigns: client unavailable — returning in-memory campaigns")
+        with _memory_campaigns_lock:
+            campaigns = list(_memory_campaigns.values())
+        campaigns.sort(key=lambda c: _created_at_sort_key(c.get("created_at")), reverse=True)
+        return campaigns[:limit]
 
     safe_limit = max(1, int(limit or 10))
     snapshots: list[Any] = []
@@ -133,18 +166,15 @@ def list_campaigns(limit: int = 10) -> list[dict[str, Any]]:
     try:
         query = collection.order_by(
             "created_at", direction=firestore_module.Query.DESCENDING
-        ).limit(
-            safe_limit
-        )
+        ).limit(safe_limit)
         snapshots = list(query.stream())
     except Exception as exc:
-        print(f"[Firestore] ERROR listing campaigns with created_at ordering: {exc}")
+        logger.warning("[Firestore] ERROR listing campaigns with created_at ordering: %s", exc)
         try:
-            # Fall back to unordered reads when created_at types are mixed (string vs timestamp).
             snapshots = list(collection.limit(max(safe_limit * 5, safe_limit)).stream())
             used_fallback_sort = True
         except Exception as fallback_exc:
-            print(f"[Firestore] ERROR listing campaigns: {fallback_exc}")
+            logger.error("[Firestore] ERROR listing campaigns: %s", fallback_exc)
             return []
 
     campaigns_with_sort_key: list[tuple[dict[str, Any], float]] = []
@@ -176,13 +206,18 @@ def list_campaigns(limit: int = 10) -> list[dict[str, Any]]:
         campaigns_with_sort_key.sort(key=lambda item: item[1], reverse=True)
 
     campaigns = [campaign for campaign, _ in campaigns_with_sort_key[:safe_limit]]
-    print(f"[Firestore] list_campaigns returned {len(campaigns)} campaigns")
+    logger.info("[Firestore] list_campaigns returned %d campaigns", len(campaigns))
     return campaigns
 
 
 def update_campaign_status(job_id: str, status: str) -> None:
     collection = _collection()
+
     if collection is None:
+        with _memory_campaigns_lock:
+            if job_id in _memory_campaigns:
+                _memory_campaigns[job_id]["status"] = status
+                _memory_campaigns[job_id]["updated_at"] = _now_iso()
         return
 
     try:
@@ -193,15 +228,13 @@ def update_campaign_status(job_id: str, status: str) -> None:
             },
             merge=True,
         )
-    except Exception:
-        return
+    except Exception as exc:
+        logger.warning("[Firestore] ERROR updating campaign status %s: %s", job_id, exc)
 
+
+# ─── Job functions ─────────────────────────────────────────────────────────────
 
 def create_job(job_id: str, config: dict[str, Any]) -> dict[str, Any]:
-    collection = _jobs_collection()
-    if collection is None:
-        return {}
-
     job_data: dict[str, Any] = {
         "job_id": job_id,
         "status": "started",
@@ -212,36 +245,58 @@ def create_job(job_id: str, config: dict[str, Any]) -> dict[str, Any]:
         "steps_completed": 0,
         "stop_requested": False,
         "demo_mode": bool(config.get("demo_mode", False)),
-        "started_at": datetime.utcnow().isoformat(),
+        "started_at": _now_iso(),  # timezone-aware ISO 8601
         "completed_at": None,
         "result_leads": [],
         "impact": {},
         "events": [],
     }
+
+    collection = _jobs_collection()
+    if collection is None:
+        logger.warning("[Firestore] Job store unavailable — storing job %s in-memory", job_id)
+        with _memory_jobs_lock:
+            _memory_jobs[job_id] = dict(job_data)
+        return job_data
+
     try:
         collection.document(job_id).set(job_data)
+        return job_data
     except Exception as exc:
-        print(f"[Firestore] ERROR creating job {job_id}: {exc}")
-        return {}
-
-    return job_data
+        logger.error("[Firestore] ERROR creating job %s: %s — falling back to in-memory", job_id, exc)
+        with _memory_jobs_lock:
+            _memory_jobs[job_id] = dict(job_data)
+        return job_data
 
 
 def get_job(job_id: str) -> dict[str, Any] | None:
+    # In-memory check first (covers both fallback and Firestore-backed jobs during active run)
+    with _memory_jobs_lock:
+        if job_id in _memory_jobs:
+            return dict(_memory_jobs[job_id])
+
     collection = _jobs_collection()
     if collection is None:
         return None
 
-    doc = collection.document(job_id).get()
-    if not doc.exists:
+    try:
+        doc = collection.document(job_id).get()
+        if not doc.exists:
+            return None
+        job = doc.to_dict() or {}
+        job.setdefault("job_id", job_id)
+        return job
+    except Exception as exc:
+        logger.warning("[Firestore] ERROR fetching job %s: %s", job_id, exc)
         return None
-
-    job = doc.to_dict() or {}
-    job.setdefault("job_id", job_id)
-    return job
 
 
 def update_job(job_id: str, updates: dict[str, Any]) -> None:
+    # Update in-memory store if present
+    with _memory_jobs_lock:
+        if job_id in _memory_jobs:
+            _memory_jobs[job_id].update(updates)
+
     collection = _jobs_collection()
     if collection is None:
         return
@@ -249,11 +304,17 @@ def update_job(job_id: str, updates: dict[str, Any]) -> None:
     try:
         collection.document(job_id).set(updates, merge=True)
     except Exception as exc:
-        print(f"[Firestore] ERROR updating job {job_id}: {exc}")
+        logger.warning("[Firestore] ERROR updating job %s: %s", job_id, exc)
 
 
 def append_job_event(job_id: str, event: dict[str, Any]) -> None:
     """Append an event to the job's event list using Firestore array union."""
+    # Update in-memory store if present
+    with _memory_jobs_lock:
+        if job_id in _memory_jobs:
+            events = _memory_jobs[job_id].setdefault("events", [])
+            events.append(event)
+
     collection = _jobs_collection()
     if collection is None:
         return
@@ -261,24 +322,28 @@ def append_job_event(job_id: str, event: dict[str, Any]) -> None:
     try:
         collection.document(job_id).update({"events": firestore_module.ArrayUnion([event])})
     except Exception as exc:
-        print(f"[Firestore] ERROR appending event for job {job_id}: {exc}")
+        logger.warning("[Firestore] ERROR appending event for job %s: %s", job_id, exc)
 
 
 def set_job_stop(job_id: str) -> None:
+    updates = {
+        "stop_requested": True,
+        "status": "stopped",
+        "current_agent": "manager",
+    }
+    # Update in-memory store if present
+    with _memory_jobs_lock:
+        if job_id in _memory_jobs:
+            _memory_jobs[job_id].update(updates)
+
     collection = _jobs_collection()
     if collection is None:
         return
 
     try:
-        collection.document(job_id).update(
-            {
-                "stop_requested": True,
-                "status": "stopped",
-                "current_agent": "manager",
-            }
-        )
+        collection.document(job_id).update(updates)
     except Exception as exc:
-        print(f"[Firestore] ERROR stopping job {job_id}: {exc}")
+        logger.warning("[Firestore] ERROR stopping job %s: %s", job_id, exc)
 
 
 def get_job_events(job_id: str, since_index: int = 0) -> list[dict[str, Any]]:

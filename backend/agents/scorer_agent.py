@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import logging
 import re
+from datetime import datetime, timezone
 from typing import Any
-from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
-from urllib.request import Request, urlopen
+
+logger = logging.getLogger(__name__)
 
 
 BLOCKLIST_DOMAINS = {
@@ -219,6 +220,7 @@ class ScorerAgent:
                 "adjusted_score": 0,
                 "discard_reason": "Blocked domain - not a target company",
             }
+            logger.debug("[ScorerAgent] Discarded %s — blocked domain", lead_url)
             return scored
 
         blocklisted, blocked_domain = self._is_non_target_blocklisted(lead)
@@ -478,6 +480,12 @@ class ScorerAgent:
         return 0, ""
 
     def _score_website_signal(self, lead: dict[str, Any]) -> tuple[int, str]:
+        """Award points for having a non-blocked company domain.
+
+        The original implementation made a blocking HTTP request (up to 4s timeout)
+        per lead. This was the largest latency source in the scorer and provided only
+        +5 points. Replaced with a fast domain-presence check.
+        """
         website = str(lead.get("website") or "").strip()
         domain = self._extract_domain(lead)
         if not website and not domain:
@@ -486,13 +494,8 @@ class ScorerAgent:
         if any(domain.endswith(blocked_domain) for blocked_domain in self._NON_COMPANY_WEBSITE_DOMAINS):
             return 0, ""
 
-        website_url = website or f"https://{domain}"
-        if website_url and "://" not in website_url:
-            website_url = f"https://{website_url}"
-        if self._website_loads(website_url):
-            return 5, "company website reachable"
-
-        return 0, ""
+        # Domain is present and not blocked — award points without HTTP roundtrip
+        return 5, "company domain present and not blocked"
 
     def _score_blog_penalty(self, lead: dict[str, Any]) -> tuple[int, str]:
         title = self._candidate_title(lead)
@@ -585,29 +588,8 @@ class ScorerAgent:
         return re.sub(r"\s+", " ", combined).strip()
 
     def _website_loads(self, url: str) -> bool:
-        cached = self._website_status_cache.get(url)
-        if cached is not None:
-            return cached
-
-        request = Request(
-            url,
-            headers={"User-Agent": "Mozilla/5.0 HuntRScorer/1.0"},
-            method="GET",
-        )
-        try:
-            with urlopen(request, timeout=4.0) as response:
-                status = int(getattr(response, "status", 0) or 0)
-                if status >= 400:
-                    self._website_status_cache[url] = False
-                    return False
-
-                page_sample = response.read(4096).decode("utf-8", errors="ignore").lower()
-                if any(marker in page_sample for marker in self._PARKED_DOMAIN_MARKERS):
-                    self._website_status_cache[url] = False
-                    return False
-
-                self._website_status_cache[url] = True
-                return True
-        except (HTTPError, URLError, ValueError, TimeoutError):
-            self._website_status_cache[url] = False
-            return False
+        """Deprecated: previously made a synchronous HTTP call per lead.
+        Now replaced by domain-presence check in _score_website_signal.
+        Retained for backward compatibility only.
+        """
+        return bool(url and "://" in url)

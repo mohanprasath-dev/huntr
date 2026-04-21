@@ -5,6 +5,8 @@ import base64
 import csv
 import json
 import io
+import logging
+import logging.config
 import os
 import threading
 import time
@@ -12,6 +14,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
+
+# Configure structured logging before anything else loads
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 import requests
 from dotenv import load_dotenv
@@ -63,6 +73,7 @@ tracking_store_lock = threading.Lock()
 TERMINAL_STATUSES = {"completed", "failed", "stopped"}
 TIME_SAVED_MINUTES_BASELINE = 180
 MANUAL_COST_PER_QUALIFIED_LEAD_INR = 840
+MAX_STREAM_SECONDS = 360  # 6 minute hard cap on SSE connections
 VS_MANUAL_SUMMARY = (
     "This would take a human 3+ hours of LinkedIn browsing, company research, and writing"
 )
@@ -946,8 +957,21 @@ async def stream_job(job_id: str) -> StreamingResponse:
     async def _event_generator() -> Any:
         last_index = 0
         last_ping = time.time()
+        stream_start = time.time()
 
         while True:
+            # Hard timeout to prevent streaming forever on dead jobs
+            if time.time() - stream_start > MAX_STREAM_SECONDS:
+                timeout_event = {
+                    "agent": "system",
+                    "action": "timeout",
+                    "result_summary": f"Stream closed after {MAX_STREAM_SECONDS}s hard timeout",
+                    "timestamp": _now_iso(),
+                }
+                yield f"data: {json.dumps(timeout_event, ensure_ascii=True)}\n\n"
+                logger.warning("[API] SSE stream timeout for job %s after %ds", job_id, MAX_STREAM_SECONDS)
+                break
+
             if time.time() - last_ping > 15:
                 yield ": keepalive\n\n"
                 last_ping = time.time()

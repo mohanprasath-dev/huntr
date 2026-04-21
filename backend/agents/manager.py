@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 from urllib.parse import urlparse
 from uuid import uuid4
+
+logger = logging.getLogger(__name__)
+_trace_lock = threading.Lock()
 
 from dotenv import load_dotenv
 
@@ -82,14 +87,32 @@ def _load_vertex_settings() -> tuple[str, str]:
     return project, location
 
 
+# Lazy-initialized singletons — populated on first use, not at module import time.
+# Module-level eager init would crash the entire API if env vars are absent.
+_gemini_flash: "Gemini | None" = None
+_gemini_pro: "Gemini | None" = None
+_gemini_init_lock = threading.Lock()
+
+
 def _build_gemini_llms() -> tuple[Gemini, Gemini]:
     project, location = _load_vertex_settings()
     aiplatform.init(project=project, location=location)
     return Gemini(model=_GEMINI_FLASH_MODEL), Gemini(model=_GEMINI_PRO_MODEL)
 
 
-gemini_flash, gemini_pro = _build_gemini_llms()
-gemini_llm = gemini_pro
+def _get_gemini_llms() -> tuple[Gemini, Gemini]:
+    global _gemini_flash, _gemini_pro
+    if _gemini_flash is None or _gemini_pro is None:
+        with _gemini_init_lock:
+            if _gemini_flash is None or _gemini_pro is None:
+                _gemini_flash, _gemini_pro = _build_gemini_llms()
+    return _gemini_flash, _gemini_pro
+
+
+# gemini_flash, gemini_pro, gemini_llm are available as module attributes
+# but are lazily initialized on first use via HuntRManager.__init__.
+# Use _get_gemini_llms() to obtain both LLMs explicitly.
+gemini_llm = None  # Alias maintained for backward compat — resolved inside HuntRManager
 
 
 # Model: gemini-2.5-pro (reasoning-heavy)
@@ -106,8 +129,20 @@ class HuntRManager:
         llm: Any | None = None,
         trace_path: Path | None = None,
     ) -> None:
-        flash_llm = llm or gemini_flash
-        pro_llm = llm or gemini_pro
+        # Lazy-load Gemini LLMs only when needed (not at import time)
+        if llm is not None:
+            flash_llm: Any = llm
+            pro_llm: Any = llm
+        else:
+            try:
+                flash_llm, pro_llm = _get_gemini_llms()
+            except Exception as exc:
+                logger.warning(
+                    "[HuntRManager] Could not initialize Gemini LLMs: %s — agents will run in no-LLM mode",
+                    exc,
+                )
+                flash_llm = None
+                pro_llm = None
 
         self.gemini_flash = flash_llm
         self.gemini_pro = pro_llm
@@ -352,10 +387,13 @@ class HuntRManager:
         run_id: str,
         leads: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
-        scored_first_pass: list[dict[str, Any]] = []
+        """Score leads once (scoring is deterministic — re-scoring produces identical results).
+        Self-correct by lowering the acceptance threshold, not by re-scoring.
+        """
+        scored_leads: list[dict[str, Any]] = []
         for index, lead in enumerate(leads, start=1):
             scored = self.scorer.score(lead)
-            scored_first_pass.append(scored)
+            scored_leads.append(scored)
             self._log_step(
                 run_id=run_id,
                 step="scorer:score",
@@ -367,7 +405,7 @@ class HuntRManager:
                 },
             )
 
-        qualified = [lead for lead in scored_first_pass if int(lead.get("score", 0)) >= _PRIMARY_SCORE_THRESHOLD]
+        qualified = [lead for lead in scored_leads if int(lead.get("score", 0)) >= _PRIMARY_SCORE_THRESHOLD]
 
         self._log_step(
             run_id=run_id,
@@ -375,7 +413,7 @@ class HuntRManager:
             payload={
                 "threshold": _PRIMARY_SCORE_THRESHOLD,
                 "qualified": len(qualified),
-                "scored": len(scored_first_pass),
+                "scored": len(scored_leads),
             },
         )
 
@@ -384,42 +422,21 @@ class HuntRManager:
                 item["qualified"] = True
             return qualified
 
+        # Self-correction: lower threshold (no re-scoring — scoring is deterministic)
         self._log_step(
             run_id=run_id,
             step="scorer:self_correction",
             payload={
-                "reason": (
-                    "no_leads_above_60"
-                    if len(qualified) == 0
-                    else "insufficient_leads_above_60"
-                ),
+                "reason": "no_leads_above_60" if len(qualified) == 0 else "insufficient_leads_above_60",
                 "qualified_first_pass": len(qualified),
                 "target_min": _MIN_QUALIFIED_LEADS,
                 "fallback_threshold": _FALLBACK_SCORE_THRESHOLD,
             },
         )
 
-        scored_second_pass: list[dict[str, Any]] = []
-        for index, lead in enumerate(leads, start=1):
-            rescored = self.scorer.score(lead)
-            scored_second_pass.append(rescored)
-            self._log_step(
-                run_id=run_id,
-                step="scorer:score",
-                payload={
-                    "pass": 2,
-                    "lead_index": index,
-                    "company": str(
-                        rescored.get("company_name") or rescored.get("company") or "Unknown Company"
-                    ),
-                    "score": int(rescored.get("score", 0)),
-                },
-            )
-
         fallback_qualified = [
-            lead for lead in scored_second_pass if int(lead.get("score", 0)) >= _FALLBACK_SCORE_THRESHOLD
+            lead for lead in scored_leads if int(lead.get("score", 0)) >= _FALLBACK_SCORE_THRESHOLD
         ]
-
         for item in fallback_qualified:
             item["qualified"] = True
 
@@ -429,17 +446,16 @@ class HuntRManager:
             payload={
                 "threshold": _FALLBACK_SCORE_THRESHOLD,
                 "qualified": len(fallback_qualified),
-                "scored": len(scored_second_pass),
+                "scored": len(scored_leads),
             },
         )
 
         if len(fallback_qualified) >= _MIN_QUALIFIED_LEADS:
             return fallback_qualified
 
-        ranked = sorted(scored_second_pass, key=lambda lead: int(lead.get("score", 0)), reverse=True)
-        target_count = min(_MIN_QUALIFIED_LEADS, len(ranked))
-        floor_results = ranked[:target_count]
-
+        # Floor: return top N by score even if below threshold
+        ranked = sorted(scored_leads, key=lambda lead: int(lead.get("score", 0)), reverse=True)
+        floor_results = ranked[:min(_MIN_QUALIFIED_LEADS, len(ranked))]
         for item in floor_results:
             item["qualified"] = int(item.get("score", 0)) >= _FALLBACK_SCORE_THRESHOLD
 
@@ -713,14 +729,18 @@ class HuntRManager:
         existing: list[dict[str, Any]],
         incoming: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
+        """Deduplicate by root domain (not raw URL) to handle URL normalization changes."""
         merged: list[dict[str, Any]] = []
-        seen_urls: set[str] = set()
+        seen_domains: set[str] = set()
 
         for lead in existing + incoming:
-            url = str(lead.get("url", "")).strip().lower()
-            if not url or url in seen_urls:
+            url = str(
+                lead.get("url") or lead.get("source_url") or lead.get("website") or ""
+            ).strip().lower()
+            domain = self._extract_root_domain(url) if url else ""
+            if not domain or domain in seen_domains:
                 continue
-            seen_urls.add(url)
+            seen_domains.add(domain)
             merged.append(lead)
 
         return merged
@@ -807,22 +827,27 @@ class HuntRManager:
         self._append_trace_event(event)
 
     def _append_trace_event(self, event: dict[str, Any]) -> None:
+        """Thread-safe append to the trace JSON file."""
         self.trace_path.parent.mkdir(parents=True, exist_ok=True)
 
-        events: list[dict[str, Any]] = []
-        if self.trace_path.exists():
-            try:
-                raw = json.loads(self.trace_path.read_text(encoding="utf-8"))
-                if isinstance(raw, list):
-                    events = [item for item in raw if isinstance(item, dict)]
-            except json.JSONDecodeError:
-                events = []
+        with _trace_lock:
+            events: list[dict[str, Any]] = []
+            if self.trace_path.exists():
+                try:
+                    raw = json.loads(self.trace_path.read_text(encoding="utf-8"))
+                    if isinstance(raw, list):
+                        events = [item for item in raw if isinstance(item, dict)]
+                except (json.JSONDecodeError, OSError):
+                    events = []
 
-        events.append(event)
-        self.trace_path.write_text(
-            json.dumps(events, indent=2, ensure_ascii=True),
-            encoding="utf-8",
-        )
+            events.append(event)
+            try:
+                self.trace_path.write_text(
+                    json.dumps(events, indent=2, ensure_ascii=True),
+                    encoding="utf-8",
+                )
+            except OSError as exc:
+                logger.warning("[Manager] Could not write trace event to %s: %s", self.trace_path, exc)
 
 
 def run_huntr(
@@ -834,4 +859,4 @@ def run_huntr(
     return manager.run_huntr(config=config, max_leads=max_leads, job_id=job_id)
 
 
-__all__ = ["HuntRManager", "gemini_flash", "gemini_pro", "gemini_llm", "run_huntr"]
+__all__ = ["HuntRManager", "_get_gemini_llms", "run_huntr"]
