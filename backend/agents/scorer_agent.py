@@ -240,6 +240,30 @@ class ScorerAgent:
             }
             return scored
 
+        title = self._candidate_title(lead)
+        url = str(lead.get("url") or lead.get("website") or "")
+
+        # Hard discard content/listicle pages before score accumulation.
+        if (
+            self._LISTICLE_TITLE_PATTERN.search(title or "")
+            or self._BLOG_PATH_PATTERN.search(url)
+            or self._CONTENT_KEYWORD_PATTERN.search(title or "")
+        ):
+            scored = dict(lead)
+            scored["score"] = 0
+            scored["tier"] = "D"
+            scored["qualified"] = False
+            scored["discarded"] = True
+            scored["discard"] = True
+            scored["discard_reason"] = "Blog/article/listicle - not a real company"
+            scored["reasoning"] = "Discarded as content page (blog/article/listicle)"
+            scored["score_breakdown"] = {
+                "base_score": self.BASE_SCORE,
+                "adjusted_score": 0,
+                "discard_reason": "Blog/article/listicle - not a real company",
+            }
+            return scored
+
         company_points, company_note = self._score_company_size(str(lead.get("size", "")))
         pain_points, pain_note = self._score_pain_signal(lead)
         decision_maker_points, decision_maker_note = self._score_decision_maker_name(lead)

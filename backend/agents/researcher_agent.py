@@ -199,6 +199,17 @@ class ResearcherAgent:
         "global",
         "india",
         "labs",
+        "automation",
+        "unlimited",
+        "calling",
+        "voice",
+        "agent",
+        "platform",
+        "tool",
+        "tools",
+        "ai",
+        "saas",
+        "crm",
     }
     _JOB_TITLE_TOKENS = {
         "developer",
