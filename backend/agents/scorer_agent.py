@@ -191,6 +191,8 @@ class ScorerAgent:
     ) -> None:
         self.gemini_llm = gemini_llm
         self._website_status_cache: dict[str, bool] = {}
+        # Keep factual agent calls deterministic when Gemini is used.
+        self.generation_config = {"temperature": 0.1}
 
     def score(self, lead: dict[str, Any]) -> dict[str, Any]:
         return self.score_lead(lead)
@@ -366,21 +368,30 @@ class ScorerAgent:
 
     def _score_decision_maker_name(self, lead: dict[str, Any]) -> tuple[int, str]:
         decision_maker = str(lead.get("decision_maker") or "").strip().lower()
+        decision_maker_source = str(
+            lead.get("decision_maker_source") or lead.get("linkedin_url") or ""
+        ).strip()
         if not decision_maker or "unknown" in decision_maker:
             return 0, "decision maker unknown"
+        if not decision_maker_source:
+            return 0, "decision maker has no verifiable source"
         return 15, "named decision maker found"
 
     def _score_email_hint(self, lead: dict[str, Any]) -> tuple[int, str]:
-        email_hint = str(lead.get("email_hint") or lead.get("contact_hint") or "").strip().lower()
+        email_hint = str(
+            lead.get("email") or lead.get("email_hint") or lead.get("contact_hint") or ""
+        ).strip().lower()
+        email_source = str(lead.get("email_source") or "").strip().lower()
         email_confidence = str(lead.get("email_hint_confidence") or "").strip().lower()
 
         if not email_hint or email_hint == "unknown":
             return 0, "no email hint"
 
+        if not email_source and email_confidence != "found":
+            return 0, "email is not source-verified"
+
         if email_confidence == "found":
             return 10, "email hint found"
-        if email_confidence == "guessed":
-            return 5, "email hint guessed"
         if "@" in email_hint:
             return 10, "email hint found"
 
@@ -434,7 +445,9 @@ class ScorerAgent:
         return 0, ""
 
     def _score_linkedin_signal(self, lead: dict[str, Any]) -> tuple[int, str]:
-        linkedin_url = str(lead.get("linkedin_url") or "").strip().lower()
+        linkedin_url = str(
+            lead.get("decision_maker_source") or lead.get("linkedin_url") or ""
+        ).strip().lower()
         if "linkedin.com/in/" in linkedin_url:
             return 10, "decision maker LinkedIn profile found"
 

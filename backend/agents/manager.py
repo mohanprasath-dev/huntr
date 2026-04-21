@@ -5,6 +5,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
+from urllib.parse import urlparse
 from uuid import uuid4
 
 from dotenv import load_dotenv
@@ -38,6 +39,7 @@ _PRIMARY_SCORE_THRESHOLD = 60
 _FALLBACK_SCORE_THRESHOLD = 50
 _MIN_QUALIFIED_LEADS = 5
 _DEMO_FORCED_SCOUT_RESULTS = 2
+_VERIFICATION_PROMPT_MAX_LEADS = 30
 _CONFIG_FIELDS = (
     "niche",
     "pain_keyword",
@@ -192,7 +194,26 @@ class HuntRManager:
                 self._mark_job_stopped(job_id=job_id)
                 return enriched_leads
 
-        scored_leads = self._score_with_self_correction(run_id=run_id, leads=enriched_leads)
+        verified_researched_leads = self._verify_researched_leads(
+            run_id=run_id,
+            leads=enriched_leads,
+        )
+        completed_steps += 1
+
+        if self._stop_requested(job_id=job_id):
+            self._log_hunt_stopped(run_id=run_id, steps_completed=completed_steps)
+            self._mark_job_stopped(job_id=job_id)
+            return verified_researched_leads
+
+        if not verified_researched_leads:
+            self._log_step(
+                run_id=run_id,
+                step="manager:complete",
+                payload={"returned_leads": 0, "reason": "no_verified_research_leads"},
+            )
+            return []
+
+        scored_leads = self._score_with_self_correction(run_id=run_id, leads=verified_researched_leads)
         completed_steps += 1
 
         if self._stop_requested(job_id=job_id):
@@ -434,6 +455,265 @@ class HuntRManager:
 
         return floor_results
 
+    def _verify_researched_leads(self, run_id: str, leads: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        verification_prompt = (
+            "You are a strict fact-checker.\n"
+            "CRITICAL: Only return information you found from an actual search result.\n"
+            "If you cannot find a field from a real source, set it to null.\n"
+            "NEVER invent, infer, or guess any field.\n"
+            "For every piece of data, you must have a source URL.\n\n"
+            "Review these leads and remove any where:\n"
+            "- The company cannot be verified via a real URL\n"
+            "- The decision maker has no LinkedIn or verifiable source\n"
+            "- Any field appears to be guessed or inferred\n\n"
+            "Return only leads with verified, sourced data.\n"
+            "Set unverified fields to null rather than removing the lead entirely."
+        )
+
+        llm_verified = self._verify_with_llm(
+            leads=leads,
+            verification_prompt=verification_prompt,
+        )
+        candidate_leads = llm_verified if llm_verified is not None else leads
+
+        verified: list[dict[str, Any]] = []
+        dropped = 0
+        for lead in candidate_leads:
+            normalized = self._normalize_verified_lead(lead)
+            if normalized is None:
+                dropped += 1
+                continue
+            verified.append(normalized)
+
+        self._log_step(
+            run_id=run_id,
+            step="manager:verify",
+            payload={
+                "input_leads": len(leads),
+                "post_llm_candidates": len(candidate_leads),
+                "verified": len(verified),
+                "dropped": dropped,
+            },
+        )
+
+        return verified
+
+    def _verify_with_llm(
+        self,
+        leads: list[dict[str, Any]],
+        verification_prompt: str,
+    ) -> list[dict[str, Any]] | None:
+        model = self.gemini_flash or self.gemini_llm
+        if model is None:
+            return None
+
+        leads_payload = json.dumps(leads[:_VERIFICATION_PROMPT_MAX_LEADS], ensure_ascii=True)
+        prompt = (
+            f"{verification_prompt}\n\n"
+            "Return strict JSON only with key `verified_leads` (array of lead objects).\n\n"
+            f"Leads JSON:\n{leads_payload}"
+        )
+
+        response: Any = None
+        for method_name in ("generate_content", "generate", "invoke", "complete", "predict"):
+            method = getattr(model, method_name, None)
+            if not callable(method):
+                continue
+
+            invocation_attempts = (
+                {"contents": prompt, "generation_config": {"temperature": 0.1}},
+                {"prompt": prompt, "generation_config": {"temperature": 0.1}},
+                {"contents": prompt, "config": {"temperature": 0.1}},
+                {"prompt": prompt, "config": {"temperature": 0.1}},
+                {"contents": prompt},
+                {"prompt": prompt},
+            )
+
+            for kwargs in invocation_attempts:
+                try:
+                    response = method(**kwargs)
+                except TypeError:
+                    continue
+                except Exception:
+                    response = None
+                    break
+
+                if response is not None:
+                    break
+
+            if response is not None:
+                break
+
+        if response is None and callable(model):
+            try:
+                response = model(prompt=prompt, generation_config={"temperature": 0.1})
+            except TypeError:
+                try:
+                    response = model(prompt)
+                except Exception:
+                    return None
+            except Exception:
+                return None
+
+        text = self._coerce_model_text(response)
+        if not text:
+            return None
+
+        cleaned = text.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.strip("`")
+            cleaned = cleaned.replace("json", "", 1).strip()
+
+        parsed: Any = None
+        try:
+            parsed = json.loads(cleaned)
+        except json.JSONDecodeError:
+            start = cleaned.find("{")
+            end = cleaned.rfind("}")
+            if start >= 0 and end > start:
+                try:
+                    parsed = json.loads(cleaned[start : end + 1])
+                except json.JSONDecodeError:
+                    parsed = None
+
+        if isinstance(parsed, dict):
+            verified_leads = parsed.get("verified_leads")
+            if isinstance(verified_leads, list):
+                return [item for item in verified_leads if isinstance(item, dict)]
+            return None
+
+        if isinstance(parsed, list):
+            return [item for item in parsed if isinstance(item, dict)]
+
+        return None
+
+    def _normalize_verified_lead(self, lead: dict[str, Any]) -> dict[str, Any] | None:
+        if not isinstance(lead, dict):
+            return None
+
+        normalized = dict(lead)
+
+        source_url = self._normalize_url(lead.get("source_url"))
+        if not source_url:
+            return None
+
+        normalized["source_url"] = source_url
+        if not self._normalize_url(normalized.get("website")):
+            normalized["website"] = source_url
+        if not self._normalize_url(normalized.get("url")):
+            normalized["url"] = source_url
+
+        decision_maker = self._normalize_text(normalized.get("decision_maker"))
+        if decision_maker and any(
+            marker in decision_maker.lower()
+            for marker in ("unknown", "name unknown", "founder/ceo", "n/a")
+        ):
+            decision_maker = None
+
+        decision_maker_source = self._normalize_url(
+            normalized.get("decision_maker_source") or normalized.get("linkedin_url")
+        )
+        if decision_maker and not decision_maker_source:
+            decision_maker = None
+
+        normalized["decision_maker"] = decision_maker
+        normalized["decision_maker_source"] = decision_maker_source
+        normalized["linkedin_url"] = decision_maker_source
+        if not decision_maker:
+            normalized["decision_maker_title"] = None
+
+        email_value = self._normalize_text(normalized.get("email"))
+        email_source = self._normalize_url(normalized.get("email_source"))
+        if email_value and "@" not in email_value:
+            email_value = None
+        if email_value and not email_source:
+            email_value = None
+
+        normalized["email"] = email_value
+        normalized["email_source"] = email_source
+        normalized["email_hint"] = email_value or "Unknown"
+        normalized["email_hint_confidence"] = "found" if email_value else "none"
+
+        pain_point = self._normalize_text(normalized.get("pain_point"))
+        pain_point_source = self._normalize_url(normalized.get("pain_point_source"))
+        if pain_point and not pain_point_source:
+            pain_point = None
+        normalized["pain_point"] = pain_point
+        normalized["pain_point_source"] = pain_point_source
+
+        size = self._normalize_text(normalized.get("size"))
+        size_source = self._normalize_url(normalized.get("size_source"))
+        if size and not size_source:
+            size = None
+        normalized["size"] = size
+        normalized["size_source"] = size_source
+
+        tech_stack = normalized.get("tech_stack")
+        tech_stack_sources_raw = normalized.get("tech_stack_sources")
+        tech_stack_sources = (
+            [
+                source
+                for source in (
+                    self._normalize_url(item)
+                    for item in tech_stack_sources_raw
+                )
+                if source
+            ]
+            if isinstance(tech_stack_sources_raw, list)
+            else []
+        )
+        if tech_stack and not tech_stack_sources:
+            tech_stack = None
+        normalized["tech_stack"] = tech_stack
+        normalized["tech_stack_sources"] = tech_stack_sources
+
+        normalized["verified"] = True
+        return normalized
+
+    def _normalize_text(self, value: Any) -> str | None:
+        cleaned = str(value or "").strip()
+        if not cleaned:
+            return None
+        return cleaned
+
+    def _normalize_url(self, value: Any) -> str | None:
+        candidate = str(value or "").strip()
+        if not candidate:
+            return None
+
+        parsed = urlparse(candidate)
+        if parsed.scheme in {"http", "https"} and parsed.netloc:
+            return candidate
+        return None
+
+    def _coerce_model_text(self, response: Any) -> str:
+        if response is None:
+            return ""
+
+        if isinstance(response, str):
+            return response.strip()
+
+        text_attr = getattr(response, "text", "")
+        if isinstance(text_attr, str) and text_attr.strip():
+            return text_attr.strip()
+
+        if isinstance(response, dict):
+            for key in ("text", "content", "output"):
+                value = response.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+
+        candidates = getattr(response, "candidates", [])
+        for candidate in candidates:
+            content = getattr(candidate, "content", None)
+            parts = getattr(content, "parts", []) if content else []
+            for part in parts:
+                part_text = getattr(part, "text", "")
+                if isinstance(part_text, str) and part_text.strip():
+                    return part_text.strip()
+
+        return ""
+
     def _attach_sender_profile(self, lead: dict[str, Any], config: Mapping[str, str]) -> dict[str, Any]:
         enriched = dict(lead)
         enriched["sender_name"] = config["sender_name"]
@@ -445,10 +725,22 @@ class HuntRManager:
         cleaned_niche = niche.strip()
         cleaned_pain = pain_keyword.strip()
         return [
-            f"{cleaned_niche} {cleaned_pain} outbound bottleneck",
-            f"{cleaned_niche} companies facing {cleaned_pain} in sales",
-            f"{cleaned_niche} startups discussing {cleaned_pain} and pipeline growth",
-            f"{cleaned_niche} b2b teams struggling with {cleaned_pain}",
+            (
+                f'site:linkedin.com/company "{cleaned_niche}" "B2B" '
+                f'"software" "India" "{cleaned_pain}" founded 2018 2019 2020'
+            ),
+            (
+                f'site:crunchbase.com "{cleaned_niche}" "India" "startup" '
+                f'"Series A" 2023 2024 "{cleaned_pain}"'
+            ),
+            (
+                f'site:linkedin.com/company "{cleaned_niche}" "India" '
+                f'"{cleaned_pain}" "hiring"'
+            ),
+            (
+                f'site:linkedin.com/in "{cleaned_niche}" "India" '
+                '(Founder OR CEO OR Co-Founder OR CTO)'
+            ),
         ]
 
     def _merge_unique_leads(

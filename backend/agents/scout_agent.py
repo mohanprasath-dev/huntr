@@ -59,6 +59,8 @@ class ScoutAgent:
         self.serper_tool = serper_tool or SerperTool()
         self.tavily_tool = tavily_tool or TavilyTool()
         self.gemini_llm = gemini_llm
+        # Keep factual agent calls deterministic when Gemini is used.
+        self.generation_config = {"temperature": 0.1}
 
     def find_candidates(
         self,
@@ -91,6 +93,7 @@ class ScoutAgent:
                 {
                     "source": str(hit.get("source", "")).strip() or "unknown",
                     "url": url,
+                    "source_url": url,
                     "company_name": company_name,
                     "contact_hint": contact_hint,
                     "pain_signal": snippet,
@@ -106,13 +109,10 @@ class ScoutAgent:
     def _serper_hits(self, niche: str, pain_keyword: str, max_leads: int) -> list[dict[str, Any]]:
         cleaned_niche = niche.strip()
         cleaned_pain_keyword = pain_keyword.strip() or cleaned_niche
-        queries = [
-            f"{cleaned_niche} company India startup hiring sales",
-            f"founder CEO {cleaned_niche} startup India site:linkedin.com",
-            f"{cleaned_pain_keyword} {cleaned_niche} startup India looking for solution",
-            f"{cleaned_niche} service provider India",
-            f"{cleaned_niche} startups India funded 2024 2025",
-        ]
+        queries = self._build_search_queries(
+            niche=cleaned_niche,
+            pain_keyword=cleaned_pain_keyword,
+        )
 
         hits: list[dict[str, Any]] = []
         per_query = max(5, min(12, max_leads))
@@ -140,6 +140,44 @@ class ScoutAgent:
             )
         )
         return hits
+
+    def _build_search_queries(self, niche: str, pain_keyword: str) -> list[str]:
+        lowered_niche = niche.lower().strip()
+        if "site:" in lowered_niche:
+            return [niche]
+
+        safe_niche = niche.strip()
+        safe_pain = pain_keyword.strip() or safe_niche
+        raw_queries = [
+            (
+                f'site:linkedin.com/company "{safe_niche}" "B2B" '
+                '"software" "India" founded 2018 2019 2020'
+            ),
+            (
+                f'site:crunchbase.com "{safe_niche}" "India" "startup" '
+                '"Series A" 2023 2024'
+            ),
+            f'site:linkedin.com/company "{safe_niche}" "{safe_pain}" "India"',
+            (
+                f'site:linkedin.com/in "{safe_niche}" "India" '
+                '(Founder OR CEO OR Co-Founder OR CTO)'
+            ),
+            (
+                f'"{safe_niche}" "{safe_pain}" "B2B" "India" '
+                '"startup" "funding"'
+            ),
+        ]
+
+        deduped: list[str] = []
+        seen: set[str] = set()
+        for query in raw_queries:
+            normalized = query.strip()
+            if not normalized or normalized in seen:
+                continue
+            seen.add(normalized)
+            deduped.append(normalized)
+
+        return deduped
 
     def _tavily_hits(self, niche: str, max_leads: int) -> list[dict[str, str]]:
         queries = [

@@ -59,6 +59,13 @@ export interface Lead {
   company: string;
   score: number;
   decision_maker: string;
+  source_url?: string | null;
+  sourceUrl?: string | null;
+  decision_maker_source?: string | null;
+  decisionMakerSource?: string | null;
+  email?: string | null;
+  email_source?: string | null;
+  emailSource?: string | null;
   linkedin_url?: string;
   linkedinUrl?: string;
   company_size?: string;

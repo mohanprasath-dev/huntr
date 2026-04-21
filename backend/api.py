@@ -75,8 +75,12 @@ TRACKING_PIXEL_BASE_URL = (
 LEADS_CSV_COLUMNS = [
     "company",
     "score",
+    "source_url",
     "decision_maker",
+    "decision_maker_source",
     "pain_point",
+    "email",
+    "email_source",
     "email_subject",
     "email_body",
     "linkedin_message",
@@ -220,8 +224,14 @@ def _lead_csv_row(lead: dict[str, Any]) -> dict[str, str]:
     return {
         "company": _text(lead.get("company") or lead.get("company_name")),
         "score": _text(lead.get("score")),
+        "source_url": _text(lead.get("source_url") or lead.get("website") or lead.get("url")),
         "decision_maker": _text(lead.get("decision_maker")),
+        "decision_maker_source": _text(
+            lead.get("decision_maker_source") or lead.get("linkedin_url")
+        ),
         "pain_point": _text(lead.get("pain_point") or lead.get("pain_signal")),
+        "email": _text(lead.get("email") or lead.get("email_hint")),
+        "email_source": _text(lead.get("email_source")),
         "email_subject": _text(lead.get("email_subject") or email_draft.get("subject")),
         "email_body": _text(lead.get("email_body") or email_draft.get("body")),
         "linkedin_message": _text(lead.get("linkedin_message") or lead.get("linkedin_draft")),
@@ -381,6 +391,13 @@ def _format_leads(leads: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "company": lead.get("company_name") or lead.get("company") or "Unknown",
                 "score": int(lead.get("score", 0) or 0),
                 "decision_maker": lead.get("decision_maker") or "Unknown",
+                "source_url": lead.get("source_url") or lead.get("website") or lead.get("url"),
+                "decision_maker_source": lead.get("decision_maker_source")
+                or lead.get("linkedin_url"),
+                "email": lead.get("email"),
+                "email_source": lead.get("email_source"),
+                "pain_point": lead.get("pain_point") or lead.get("pain_signal"),
+                "source": lead.get("source") or "unknown",
                 "email_draft": {
                     "subject": lead.get("email_subject") or "",
                     "body": lead.get("email_body") or "",

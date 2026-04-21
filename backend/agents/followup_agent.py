@@ -15,6 +15,11 @@ class FollowupAgent:
         self.gemini_llm = gemini_llm
 
     def build_sequence(self, lead: dict[str, Any], steps: int = 3) -> dict[str, Any]:
+        if str(lead.get("outreach_status") or "").strip().lower() == "needs_review":
+            enriched = dict(lead)
+            enriched["followup_sequence"] = []
+            return enriched
+
         company = str(lead.get("company_name") or lead.get("company") or "your team")
         pain_point = str(
             lead.get("pain_point")

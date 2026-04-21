@@ -183,6 +183,41 @@ class ResearcherAgent:
         "private",
         "pvt",
     }
+    _COMPANY_SUFFIX_TOKENS = {
+        "web",
+        "design",
+        "tech",
+        "solutions",
+        "services",
+        "systems",
+        "group",
+        "agency",
+        "studio",
+        "digital",
+        "media",
+        "consulting",
+        "global",
+        "india",
+        "labs",
+    }
+    _JOB_TITLE_TOKENS = {
+        "developer",
+        "engineer",
+        "designer",
+        "analyst",
+        "manager",
+        "specialist",
+        "consultant",
+        "intern",
+    }
+    _GENERIC_PAIN_PHRASES = {
+        "likely struggles",
+        "probably needs",
+        "as a growing",
+        "likely needs",
+        "may struggle",
+        "might struggle",
+    }
     _INVALID_DECISION_MAKER_NAME_TERMS = {
         "institute",
         "university",
@@ -249,6 +284,8 @@ class ResearcherAgent:
         self.serper_tool = serper_tool or SerperTool()
         self.tavily_tool = tavily_tool or TavilyTool()
         self.gemini_llm = gemini_llm
+        # Keep factual agent calls deterministic when Gemini is used.
+        self.generation_config = {"temperature": 0.1}
 
     def enrich(self, lead: dict[str, Any]) -> dict[str, Any]:
         company_name = str(lead.get("company_name") or lead.get("company") or "Unknown Company")
@@ -272,6 +309,11 @@ class ResearcherAgent:
         activity_query = f"{company_name} funding launch hiring expansion partnership"
         activity_results = self.tavily_tool.search(query=activity_query, max_results=4)
 
+        source_url = self._pick_primary_source_url(
+            preferred_urls=[company_site, lead_url],
+            research_results=website_results + linkedin_results + activity_results,
+        )
+
         decision_profile = self._find_decision_maker_profile(
             company_name=company_name,
             domain=company_domain,
@@ -280,49 +322,87 @@ class ResearcherAgent:
         decision_maker_name = clean_name(decision_maker_name.replace("View ", "").strip())
         decision_maker_title = str(decision_profile.get("title", "")).strip()
         linkedin_url = str(decision_profile.get("url", "")).strip()
+        decision_maker_source = str(decision_profile.get("source_url", "")).strip()
+        if not decision_maker_source and linkedin_url:
+            decision_maker_source = linkedin_url
 
-        size = self._infer_company_size(website_results + linkedin_results + activity_results)
-        tech_stack = self._infer_tech_stack(website_results + activity_results)
-        pain_point = self._infer_pain_point(
+        size, size_source = self._infer_company_size(website_results + linkedin_results + activity_results)
+        tech_stack, tech_stack_sources = self._infer_tech_stack(website_results + activity_results)
+        pain_point, pain_point_source = self._infer_pain_point(
             lead=lead,
             research_results=website_results + linkedin_results + activity_results,
         )
-        decision_maker = decision_maker_name or "Founder/CEO (name unknown)"
+        if not pain_point and self.gemini_llm is not None:
+            company_description = self._build_company_description(website_results + activity_results)
+            industry = self._infer_industry(lead, company_description)
+            generated_pain_point = self._generate_specific_pain_point(
+                company_name=company_name,
+                company_description=company_description,
+                industry=industry,
+            )
+            if generated_pain_point:
+                pain_point = generated_pain_point
+                pain_point_source = source_url
+
+        decision_maker: str | None = decision_maker_name or None
         if not is_valid_person_name(decision_maker) or self._is_invalid_decision_maker_name(
-            decision_maker
+            decision_maker or ""
         ):
-            decision_maker = "Founder/CEO (name unknown)"
+            decision_maker = None
             decision_maker_title = ""
             linkedin_url = ""
-        email_hint, email_hint_confidence, email_search_results = self._infer_email_hint(
+            decision_maker_source = ""
+
+        if decision_maker and not decision_maker_source:
+            decision_maker_source = source_url or ""
+
+        email_value, email_source, email_search_results = self._infer_email_hint(
             company_name=company_name,
             decision_maker_name=decision_maker_name,
             domain=company_domain,
             contact_hint=str(lead.get("contact_hint", "")),
+            lead_source_url=source_url,
         )
+        email_hint_confidence = "found" if email_value else "none"
+        recent_activity = self._recent_activity_summary(activity_results)
 
         enriched = dict(lead)
         enriched.update(
             {
                 "company": company_name,
                 "company_name": company_name,
+                "source_url": source_url,
                 "size": size,
+                "size_source": size_source,
                 "tech_stack": tech_stack,
+                "tech_stack_sources": tech_stack_sources,
                 "pain_point": pain_point,
+                "pain_point_source": pain_point_source,
                 "decision_maker": decision_maker,
-                "decision_maker_title": decision_maker_title,
-                "email_hint": email_hint,
+                "decision_maker_title": decision_maker_title or None,
+                "decision_maker_source": decision_maker_source or None,
+                "email": email_value,
+                "email_source": email_source,
+                "email_hint": email_value or "Unknown",
                 "email_hint_confidence": email_hint_confidence,
-                "linkedin_url": linkedin_url,
-                "website": company_site or lead_url,
-                "domain": domain,
-                "recent_activity": self._recent_activity_summary(activity_results),
+                "linkedin_url": linkedin_url or None,
+                "website": company_site or lead_url or None,
+                "domain": domain or None,
+                "recent_activity": recent_activity,
                 "research": {
                     "website_results": website_results,
                     "linkedin_results": linkedin_results,
                     "activity_results": activity_results,
                     "linkedin_profile_result": decision_profile,
                     "email_results": email_search_results,
+                },
+                "research_sources": {
+                    "source_url": source_url,
+                    "size_source": size_source,
+                    "tech_stack_sources": tech_stack_sources,
+                    "pain_point_source": pain_point_source,
+                    "decision_maker_source": decision_maker_source or None,
+                    "email_source": email_source,
                 },
             }
         )
@@ -345,44 +425,58 @@ class ResearcherAgent:
 
         return fallback_url
 
-    def _infer_company_size(self, results: list[dict[str, Any]]) -> str:
-        combined_text = " ".join(
-            f"{item.get('title', '')} {item.get('content', '')}".strip() for item in results
-        )
-        match = self._SIZE_PATTERN.search(combined_text)
-        if match:
+    def _infer_company_size(self, results: list[dict[str, Any]]) -> tuple[str | None, str | None]:
+        for item in results:
+            combined_text = f"{item.get('title', '')} {item.get('content', '')}".strip()
+            if not combined_text:
+                continue
+
+            match = self._SIZE_PATTERN.search(combined_text)
+            if not match:
+                continue
+
             size_token = match.group(1).replace("to", "-").replace(" ", "")
-            return f"{size_token} employees"
+            source_url = self._extract_result_source_url(item)
+            return f"{size_token} employees", source_url
 
-        return "Unknown"
+        return None, None
 
-    def _infer_tech_stack(self, results: list[dict[str, Any]]) -> list[str]:
-        combined_text = " ".join(
-            f"{item.get('title', '')} {item.get('content', '')}".lower().strip() for item in results
-        )
-
+    def _infer_tech_stack(self, results: list[dict[str, Any]]) -> tuple[list[str] | None, list[str]]:
         stack: list[str] = []
-        for needle, normalized in self._TECH_KEYWORDS.items():
-            if needle in combined_text and normalized not in stack:
+        source_urls: list[str] = []
+
+        for item in results:
+            combined_text = f"{item.get('title', '')} {item.get('content', '')}".lower().strip()
+            if not combined_text:
+                continue
+
+            source_url = self._extract_result_source_url(item)
+            for needle, normalized in self._TECH_KEYWORDS.items():
+                if needle not in combined_text or normalized in stack:
+                    continue
+
                 stack.append(normalized)
+                if source_url and source_url not in source_urls:
+                    source_urls.append(source_url)
 
         if stack:
-            return stack[:8]
-        return ["Unknown"]
+            return stack[:8], source_urls[:8]
+        return None, []
 
     def _infer_pain_point(
         self,
         lead: dict[str, Any],
         research_results: list[dict[str, Any]],
-    ) -> str:
+    ) -> tuple[str | None, str | None]:
         company_name = str(lead.get("company_name") or lead.get("company") or "this company").strip()
         if not company_name:
             company_name = "this company"
 
-        snippet_candidates: list[str] = []
+        snippet_candidates: list[tuple[str, str | None]] = []
         lead_signal = str(lead.get("pain_signal") or "").strip()
         if lead_signal:
-            snippet_candidates.append(lead_signal)
+            lead_source = str(lead.get("source_url") or lead.get("url") or lead.get("website") or "").strip()
+            snippet_candidates.append((lead_signal, lead_source or None))
 
         for item in research_results:
             if not isinstance(item, dict):
@@ -393,10 +487,10 @@ class ResearcherAgent:
             content = str(item.get("content") or "").strip()
             combined = " ".join(part for part in (title, snippet, content) if part).strip()
             if combined:
-                snippet_candidates.append(combined)
+                snippet_candidates.append((combined, self._extract_result_source_url(item)))
 
         seen_snippets: set[str] = set()
-        for raw_snippet in snippet_candidates:
+        for raw_snippet, source_url in snippet_candidates:
             normalized_snippet = re.sub(r"\s+", " ", raw_snippet).strip()
             if not normalized_snippet or normalized_snippet in seen_snippets:
                 continue
@@ -407,23 +501,9 @@ class ResearcherAgent:
 
             candidate_pain = self._extract_clean_pain_point(normalized_snippet)
             if candidate_pain and is_valid_pain_point(candidate_pain):
-                return candidate_pain
+                return candidate_pain, source_url
 
-        company_description = self._build_company_description(research_results)
-        industry = self._infer_industry(lead=lead, company_description=company_description)
-        generated = self._generate_specific_pain_point(
-            company_name=company_name,
-            company_description=company_description,
-            industry=industry,
-        )
-        if generated:
-            return generated
-
-        industry_label = industry or "B2B"
-        return (
-            f"As a growing {industry_label} company, {company_name} likely struggles with "
-            "manual lead qualification and fragmented follow-up workflows at scale."
-        )
+        return None, None
 
     def _contains_pain_signal(self, text: str) -> bool:
         lowered_text = text.lower().strip()
@@ -503,14 +583,24 @@ class ResearcherAgent:
             return ""
 
         prompt = (
-            "Based on this company information:\n"
+            "You are a B2B sales researcher. Based on ONLY the verified company data below, "
+            "write ONE specific sentence about a real operational pain point this company faces.\n\n"
             f"Company: {company_name}\n"
-            f"Description: {company_description or 'Not publicly available'}\n"
+            f"Description: {company_description or 'Not available'}\n"
             f"Industry: {industry or 'Unknown'}\n\n"
-            "Write ONE specific sentence describing a likely automation or sales pain point this "
-            "company faces. Be specific to their industry. Do NOT use generic phrases like \"Likely "
-            "needs AI automation\". Example: \"As a fast-growing SaaS company, COMPANY likely "
-            "struggles with manual lead qualification at scale.\""
+            "STRICT RULES:\n"
+            "1. Only use information from the description above\n"
+            "2. Be specific to their actual business, not generic\n"
+            "3. NEVER use phrases like 'likely struggles', 'probably needs', 'as a growing company'\n"
+            "4. If description is empty or vague, return exactly: INSUFFICIENT_DATA\n"
+            "5. Max 1 sentence, under 150 characters\n"
+            "6. Focus on: outbound sales, lead generation, client acquisition, or scaling\n\n"
+            "Examples of GOOD output:\n"
+            "- 'Manual client onboarding slows their web agency delivery pipeline.'\n"
+            "- 'Scaling outbound for enterprise SaaS without burning SDR bandwidth.'\n\n"
+            "Examples of BAD output (never do this):\n"
+            "- 'As a growing B2B company, they likely struggle with...'\n"
+            "- 'They probably need AI automation'\n"
         )
 
         response: Any = None
@@ -519,26 +609,55 @@ class ResearcherAgent:
             if not callable(method):
                 continue
 
+            invocation_attempts = (
+                {"contents": prompt, "generation_config": self.generation_config},
+                {"prompt": prompt, "generation_config": self.generation_config},
+                {"contents": prompt, "config": self.generation_config},
+                {"prompt": prompt, "config": self.generation_config},
+                {"contents": prompt},
+                {"prompt": prompt},
+            )
+
             try:
-                response = method(prompt)
-                break
-            except TypeError:
-                try:
-                    response = method(contents=prompt)
+                for kwargs in invocation_attempts:
+                    try:
+                        response = method(**kwargs)
+                    except TypeError:
+                        continue
+                    if response is not None:
+                        break
+
+                if response is not None:
                     break
-                except Exception:
-                    continue
             except Exception:
                 continue
 
         if response is None and callable(self.gemini_llm):
-            try:
-                response = self.gemini_llm(prompt)
-            except Exception:
-                return ""
+            invocation_attempts = (
+                {"prompt": prompt, "generation_config": self.generation_config},
+                {"contents": prompt, "generation_config": self.generation_config},
+            )
+            for kwargs in invocation_attempts:
+                try:
+                    response = self.gemini_llm(**kwargs)
+                except TypeError:
+                    continue
+                except Exception:
+                    return ""
+                if response is not None:
+                    break
+
+            if response is None:
+                try:
+                    response = self.gemini_llm(prompt)
+                except Exception:
+                    return ""
 
         generated_text = self._coerce_model_text(response)
-        if not generated_text:
+        if not generated_text or "insufficient_data" in generated_text.lower():
+            return ""
+
+        if any(phrase in generated_text.lower() for phrase in self._GENERIC_PAIN_PHRASES):
             return ""
 
         single_sentence = re.split(r"(?<=[.!?])\s+", generated_text.strip())[0].strip()
@@ -548,11 +667,10 @@ class ResearcherAgent:
         if single_sentence[-1] not in ".!?":
             single_sentence = f"{single_sentence}."
 
-        lowered = single_sentence.lower()
-        if "likely needs ai automation" in lowered:
+        if any(phrase in single_sentence.lower() for phrase in self._GENERIC_PAIN_PHRASES):
             return ""
 
-        return single_sentence[:280]
+        return single_sentence[:150]
 
     def _coerce_model_text(self, response: Any) -> str:
         if response is None:
@@ -586,12 +704,13 @@ class ResearcherAgent:
         query = f"site:linkedin.com/in {company_name} founder OR CEO OR CTO"
         results = self.serper_tool.search(query=query, num_results=5)
         if not results:
-            return {"name": "", "title": "", "url": ""}
+            return {"name": "", "title": "", "url": "", "source_url": ""}
 
         name = ""
         title = ""
         linkedin_url = ""
         source_title = ""
+        decision_maker_source_url = ""
 
         for item in results:
             if not isinstance(item, dict):
@@ -600,6 +719,9 @@ class ResearcherAgent:
             raw_title = str(item.get("title", "")).strip()
             raw_snippet = str(item.get("snippet", "")).strip()
             raw_url = str(item.get("link", "")).strip()
+            if raw_url and not self._is_probable_linkedin_profile_url(raw_url):
+                continue
+
             candidate_name = self._extract_person_name(snippet=raw_snippet, title=raw_title)
             candidate_name = clean_name(candidate_name.replace("View ", "").strip())
             if not is_valid_person_name(candidate_name):
@@ -607,6 +729,7 @@ class ResearcherAgent:
 
             name = candidate_name
             source_title = raw_title
+            decision_maker_source_url = raw_url
             if "linkedin.com/in/" in raw_url:
                 linkedin_url = raw_url
 
@@ -630,6 +753,9 @@ class ResearcherAgent:
                 raw_title = str(item.get("title", "")).strip()
                 raw_snippet = str(item.get("snippet", "")).strip()
                 raw_url = str(item.get("link", "")).strip()
+                if raw_url and not self._is_probable_linkedin_profile_url(raw_url):
+                    continue
+
                 combined_text = f"{raw_title} {raw_snippet}".strip()
 
                 extracted_title = self._extract_linkedin_title(
@@ -639,6 +765,9 @@ class ResearcherAgent:
                 )
                 if extracted_title:
                     title = extracted_title
+
+                if not decision_maker_source_url and raw_url:
+                    decision_maker_source_url = raw_url
 
                 if not linkedin_url and "linkedin.com/in/" in raw_url:
                     linkedin_url = raw_url
@@ -651,6 +780,7 @@ class ResearcherAgent:
             "title": title,
             "url": linkedin_url,
             "source_title": source_title,
+            "source_url": decision_maker_source_url,
         }
 
     def _extract_linkedin_title(self, name: str, company_name: str, text: str) -> str:
@@ -688,10 +818,11 @@ class ResearcherAgent:
         decision_maker_name: str,
         domain: str,
         contact_hint: str,
-    ) -> tuple[str, str, list[dict[str, Any]]]:
+        lead_source_url: str | None,
+    ) -> tuple[str | None, str | None, list[dict[str, Any]]]:
         contact_email = self._extract_email(contact_hint)
         if contact_email:
-            return contact_email, "found", []
+            return contact_email, lead_source_url, []
 
         email_query = f"{company_name} founder email contact"
         email_results = self.serper_tool.search(query=email_query, num_results=5)
@@ -701,13 +832,9 @@ class ResearcherAgent:
             link = str(item.get("link", "")).strip()
             discovered_email = self._extract_email(f"{title} {snippet} {link}")
             if discovered_email:
-                return discovered_email, "found", email_results
+                return discovered_email, (link or None), email_results
 
-        guessed_email = self._guess_email(decision_maker_name=decision_maker_name, domain=domain)
-        if guessed_email:
-            return guessed_email, "guessed", email_results
-
-        return "Unknown", "guessed", email_results
+        return None, None, email_results
 
     def _extract_person_name(self, snippet: str, title: str) -> str:
         for text in (snippet, title):
@@ -718,8 +845,38 @@ class ResearcherAgent:
                     continue
                 if len(normalized.split()) < 2:
                     continue
+
+                if lowered_tokens & self._COMPANY_SUFFIX_TOKENS:
+                    continue
+
+                if lowered_tokens & self._JOB_TITLE_TOKENS:
+                    continue
+
                 return normalized
         return ""
+
+    def _is_probable_linkedin_profile_url(self, url: str) -> bool:
+        normalized = (self._normalize_url(url) or "").lower()
+        if not normalized:
+            return False
+
+        if "linkedin.com/in/" not in normalized:
+            return False
+
+        blocked_paths = (
+            "/company/",
+            "/jobs/",
+            "/posts/",
+            "/pulse/",
+            "/school/",
+            "/feed/",
+            "/groups/",
+            "/showcase/",
+        )
+        if any(path in normalized for path in blocked_paths):
+            return False
+
+        return True
 
     def _extract_decision_maker_title(self, raw_title: str, raw_snippet: str) -> str:
         text = f"{raw_title} {raw_snippet}"
@@ -750,33 +907,6 @@ class ResearcherAgent:
             return ""
         return match.group(0).strip().lower()
 
-    def _guess_email(self, decision_maker_name: str, domain: str) -> str:
-        if not domain or not decision_maker_name:
-            return ""
-
-        name_parts = [re.sub(r"[^A-Za-z]", "", token).lower() for token in decision_maker_name.split()]
-        name_parts = [token for token in name_parts if token]
-        if not name_parts:
-            return ""
-
-        first_name = name_parts[0]
-        last_name = name_parts[-1] if len(name_parts) >= 2 else ""
-
-        candidates = [f"{first_name}@{domain}"]
-        if last_name:
-            candidates.append(f"{first_name}.{last_name}@{domain}")
-            candidates.append(f"{'.'.join(name_parts)}@{domain}")
-
-        seen_candidates: set[str] = set()
-        deduped_candidates: list[str] = []
-        for candidate in candidates:
-            if candidate in seen_candidates:
-                continue
-            seen_candidates.add(candidate)
-            deduped_candidates.append(candidate)
-
-        return deduped_candidates[0] if deduped_candidates else ""
-
     def _extract_domain(self, url: str) -> str:
         if not url:
             return ""
@@ -784,12 +914,51 @@ class ResearcherAgent:
         parsed = urlparse(url)
         return parsed.netloc.lower().replace("www.", "").split(":")[0]
 
-    def _recent_activity_summary(self, results: list[dict[str, Any]]) -> str:
+    def _recent_activity_summary(self, results: list[dict[str, Any]]) -> str | None:
         if not results:
-            return "No notable recent public activity found"
+            return None
 
         snippets = [str(item.get("title", "")).strip() for item in results if item.get("title")]
         if not snippets:
-            return "No notable recent public activity found"
+            return None
 
         return " | ".join(snippets[:2])
+
+    def _pick_primary_source_url(
+        self,
+        preferred_urls: list[str],
+        research_results: list[dict[str, Any]],
+    ) -> str | None:
+        for candidate in preferred_urls:
+            normalized = self._normalize_url(candidate)
+            if normalized:
+                return normalized
+
+        for item in research_results:
+            source_url = self._extract_result_source_url(item)
+            if source_url:
+                return source_url
+
+        return None
+
+    def _extract_result_source_url(self, result: dict[str, Any]) -> str | None:
+        if not isinstance(result, dict):
+            return None
+
+        for key in ("url", "link"):
+            candidate = self._normalize_url(result.get(key))
+            if candidate:
+                return candidate
+
+        return None
+
+    def _normalize_url(self, value: Any) -> str | None:
+        candidate = str(value or "").strip()
+        if not candidate:
+            return None
+
+        parsed = urlparse(candidate)
+        if parsed.scheme in {"http", "https"} and parsed.netloc:
+            return candidate
+
+        return None

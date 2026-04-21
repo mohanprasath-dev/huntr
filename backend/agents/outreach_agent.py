@@ -50,6 +50,13 @@ class OutreachAgent:
         "dear team",
         "we help businesses",
     )
+    _BAD_PAIN_PATTERNS = (
+        "likely struggles",
+        "as a growing b2b",
+        "as a growing company",
+        "probably needs",
+        "likely needs ai",
+    )
 
     def __init__(
         self,
@@ -63,6 +70,23 @@ class OutreachAgent:
         self.client = self._build_client()
 
     def draft_outreach(self, lead: dict[str, Any]) -> dict[str, Any]:
+        pain_point = self._clean_detail(lead.get("pain_point") or "")
+        if not self._is_usable_pain_point(pain_point):
+            skipped = dict(lead)
+            skipped.update(
+                {
+                    "outreach_status": "needs_review",
+                    "outreach_skip_reason": "pain_point_insufficient",
+                    "email_subject": "",
+                    "email_body": "",
+                    "linkedin_message": "",
+                    "email_send_requires_confirmation": False,
+                    "email_send_status": "skipped",
+                    "email_send_prompt": "Outreach skipped due to insufficient pain point quality.",
+                }
+            )
+            return skipped
+
         context = self._build_context(lead)
         prompt = self._build_prompt(context)
         generated_text = self._generate_with_gemini(prompt)
@@ -124,11 +148,16 @@ class OutreachAgent:
                 "company_name": context["company_name"],
                 "website": context["website"],
                 "domain": context["domain"],
-                "pain_point": context["pain_point"],
+                "source_url": context["source_url"] or None,
+                "pain_point": context["pain_point"] or None,
+                "pain_point_source": context["pain_point_source"] or None,
                 "recent_activity": context["recent_activity"],
-                "decision_maker": context["decision_maker"],
+                "decision_maker": context["decision_maker"] or None,
+                "decision_maker_source": context["decision_maker_source"] or None,
                 "tech_stack": context["tech_stack"],
                 "size": context["size"],
+                "email": context["email"] or None,
+                "email_source": context["email_source"] or None,
                 "score": context["score"],
                 "tier": context["tier"],
                 "sender_name": context["sender_name"],
@@ -141,6 +170,10 @@ class OutreachAgent:
         return (
             "You are Outreach Specialist, writing founder-to-founder outreach.\n"
             "Generate outreach for exactly one lead using only the lead facts.\n"
+            "CRITICAL: Only return information you found from an actual search result.\n"
+            "If you cannot find a field from a real source, set it to null.\n"
+            "NEVER invent, infer, or guess any field.\n"
+            "For every piece of data, you must have a source URL.\n"
             "Hard requirements:\n"
             "1) Cold email subject must reference the lead's specific pain point.\n"
             "2) Cold email opening line must mention something specific about the company.\n"
@@ -200,10 +233,17 @@ class OutreachAgent:
         domain = self._clean_detail(lead.get("domain"))
         pain_point = self._clean_detail(lead.get("pain_point") or lead.get("pain_signal"))
         if not pain_point:
-            pain_point = "manual prospecting and inconsistent pipeline conversion"
+            pain_point = ""
+        source_url = self._clean_detail(lead.get("source_url"))
+        pain_point_source = self._clean_detail(lead.get("pain_point_source"))
 
         recent_activity = self._clean_detail(lead.get("recent_activity"))
         decision_maker = self._clean_detail(lead.get("decision_maker"))
+        decision_maker_source = self._clean_detail(
+            lead.get("decision_maker_source") or lead.get("linkedin_url")
+        )
+        email = self._clean_detail(lead.get("email") or lead.get("email_hint"))
+        email_source = self._clean_detail(lead.get("email_source"))
         tech_stack = self._stringify_tech_stack(lead.get("tech_stack"))
         size = self._clean_detail(lead.get("size"))
         score = self._clean_detail(lead.get("score"))
@@ -223,12 +263,17 @@ class OutreachAgent:
             "company_name": company_name,
             "website": website,
             "domain": domain,
+            "source_url": source_url,
             "pain_point": pain_point,
+            "pain_point_source": pain_point_source,
             "pain_focus": pain_focus,
             "recent_activity": recent_activity,
             "activity_snippet": activity_snippet,
             "decision_maker": decision_maker,
+            "decision_maker_source": decision_maker_source,
             "decision_maker_name": decision_maker_name,
+            "email": email,
+            "email_source": email_source,
             "tech_stack": tech_stack,
             "size": size,
             "score": score,
@@ -449,6 +494,13 @@ class OutreachAgent:
         if not lowered:
             return True
         return any(phrase in lowered for phrase in self._GENERIC_PHRASES)
+
+    def _is_usable_pain_point(self, pain_point: str) -> bool:
+        cleaned = self._clean_line(pain_point)
+        if not cleaned:
+            return False
+        lowered = cleaned.lower()
+        return not any(pattern in lowered for pattern in self._BAD_PAIN_PATTERNS)
 
     def _clean_detail(self, value: Any) -> str:
         text = str(value).strip() if value is not None else ""
